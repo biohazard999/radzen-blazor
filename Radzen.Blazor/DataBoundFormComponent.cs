@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
-
+using Microsoft.AspNetCore.Components.Web;
 using Radzen.Blazor;
 using Radzen.Blazor.Rendering;
 
@@ -278,7 +278,7 @@ namespace Radzen
 
                         query.Add($"{Enum.GetName(typeof(StringFilterOperator), FilterOperator)}(@0)");
 
-                        _view = Query.Where(String.Join(".", query), ignoreCase ? searchText.ToLower() : searchText);
+                        _view = Query.Where(DynamicLinqCustomTypeProvider.ParsingConfig, string.Join(".", query), ignoreCase ? searchText.ToLower() : searchText);
                     }
                     else
                     {
@@ -392,19 +392,33 @@ namespace Radzen
                                                                        .AddDisabled(Disabled)
                                                                        .Add(FieldIdentifier, EditContext)
                                                                        .Add("rz-state-empty", !HasValue);
-#if NET5_0_OR_GREATER
+
         /// <inheritdoc/>
         public virtual async ValueTask FocusAsync()
         {
             await Element.FocusAsync();
         }
-#endif
 
         /// <summary> Provides support for RadzenFormField integration. </summary>
         [CascadingParameter]
         public IFormFieldContext FormFieldContext { get; set; }
 
         /// <summary> Gets the current placeholder. Returns empty string if this component is inside a RadzenFormField.</summary>
-        protected string CurrentPlaceholder => FormFieldContext != null ? " " : Placeholder;
+        protected string CurrentPlaceholder => FormFieldContext?.AllowFloatingLabel == true ? " " : Placeholder;
+
+        /// <summary>
+        /// Handles the <see cref="E:ContextMenu" /> event.
+        /// </summary>
+        /// <param name="args">The <see cref="MouseEventArgs"/> instance containing the event data.</param>
+        /// <returns>Task.</returns>
+        public override Task OnContextMenu(MouseEventArgs args)
+        {
+            if (!Disabled)
+            {
+                return base.OnContextMenu(args);
+            }
+
+            return Task.CompletedTask;
+        }
     }
 }

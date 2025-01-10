@@ -66,10 +66,7 @@ namespace Radzen
         /// <param name="e">The <see cref="Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs"/> instance containing the event data.</param>
         private void UriHelper_OnLocationChanged(object sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
         {
-            if (this.OnNavigate != null)
-            {
-                this.OnNavigate();
-            }
+            this.OnNavigate?.Invoke();
         }
 
         /// <summary>
@@ -214,5 +211,15 @@ namespace Radzen
         /// </summary>
         /// <value>The image.</value>
         public string Image { get; set; }
+        /// <summary>
+        /// Gets or sets the image style.
+        /// </summary>
+        /// <value>The image style.</value>
+        public string ImageStyle { get; set; }
+        /// <summary>
+        /// Gets a value indicating whether this instance is disabled.
+        /// </summary>
+        /// <value><c>true</c> if this instance is disabled; otherwise, <c>false</c>.</value>
+        public bool Disabled { get; set; }
     }
 }

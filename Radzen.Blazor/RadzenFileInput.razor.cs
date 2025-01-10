@@ -24,6 +24,7 @@ namespace Radzen.Blazor
         /// Specifies additional custom attributes that will be rendered by the input.
         /// </summary>
         /// <value>The attributes.</value>
+        [Parameter]
         public IReadOnlyDictionary<string, object> InputAttributes { get; set; }
 
         /// <summary>
@@ -32,6 +33,20 @@ namespace Radzen.Blazor
         /// <value>The choose button text.</value>
         [Parameter]
         public string ChooseText { get; set; } = "Choose";
+
+        /// <summary>
+        /// Gets or sets the delete button text.
+        /// </summary>
+        /// <value>The delete button text.</value>
+        [Parameter]
+        public string DeleteText { get; set; } = "Delete";
+
+        /// <summary>
+        /// Gets or sets the text.
+        /// </summary>
+        /// <value>The text.</value>
+        [Parameter]
+        public string ImageAlternateText { get; set; } = "image";
 
         /// <summary>
         /// Gets or sets the title.
@@ -50,7 +65,7 @@ namespace Radzen.Blazor
         /// Gets the button class list.
         /// </summary>
         /// <value>The button class list.</value>
-        ClassList ButtonClassList => ClassList.Create("rz-button rz-button-icon-only rz-light")
+        ClassList ButtonClassList => ClassList.Create("rz-button rz-button-icon-only rz-base rz-shade-default")
                                               .AddDisabled(Disabled);
 
         /// <inheritdoc />
@@ -82,6 +97,23 @@ namespace Radzen.Blazor
                 }
 
                 return false;
+            }
+        }
+
+        private string ImageValue
+        {
+            get
+            {
+                if (Value == null)
+                {
+                    return string.Empty;
+                }
+                else if (Value is byte[] bytes)
+                {
+                    return System.Text.Encoding.Default.GetString(bytes);
+                }
+
+                return Value.ToString();
             }
         }
 
@@ -121,6 +153,11 @@ namespace Radzen.Blazor
         [JSInvokable("RadzenUpload.OnChange")]
         public async System.Threading.Tasks.Task OnChange(IEnumerable<PreviewFileInfo> files)
         {
+            if(files == null || !files.Any())
+            {
+                return;
+            }
+
             var file = files.FirstOrDefault();
 
             FileSize = file.Size;
@@ -130,20 +167,6 @@ namespace Radzen.Blazor
             await FileNameChanged.InvokeAsync(FileName);
 
             await OnChange();
-        }
-
-        string _Id;
-        string Id
-        {
-            get
-            {
-                if (_Id == null)
-                {
-                    _Id = $"{Guid.NewGuid()}";
-                }
-
-                return _Id;
-            }
         }
 
         private bool visibleChanged = false;
@@ -159,7 +182,7 @@ namespace Radzen.Blazor
 
                 if (Visible)
                 {
-                    await JSRuntime.InvokeVoidAsync("Radzen.uploads", Reference, Id);
+                    await JSRuntime.InvokeVoidAsync("Radzen.uploads", Reference, Name ?? GetId());
                 }
             }
         }

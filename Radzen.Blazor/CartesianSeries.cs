@@ -5,7 +5,7 @@ using System.Linq;
 using System.Linq.Dynamic.Core;
 using Radzen.Blazor.Rendering;
 using System.Threading.Tasks;
-using System.Collections;
+using System.Net.Mime;
 using Microsoft.AspNetCore.Components.Rendering;
 
 namespace Radzen.Blazor
@@ -92,6 +92,12 @@ namespace Radzen.Blazor
                 throw new ArgumentException($"Property {propertyName} does not exist");
             }
 
+#if NET6_0_OR_GREATER
+            if(PropertyAccess.IsDateOnly(property))
+            {
+                return false;
+            }
+#endif
             return PropertyAccess.IsDate(property);
         }
 
@@ -404,7 +410,7 @@ namespace Radzen.Blazor
 
                     if (IsDate(CategoryProperty) || IsNumeric(CategoryProperty))
                     {
-                        Items = Items.AsQueryable().OrderBy(CategoryProperty).ToList();
+                        Items = Items.AsQueryable().OrderBy(DynamicLinqCustomTypeProvider.ParsingConfig, CategoryProperty).ToList();
                     }
                 }
 
@@ -472,28 +478,74 @@ namespace Radzen.Blazor
         }
 
         /// <inheritdoc />
-        public virtual RenderFragment RenderTooltip(object data, double marginLeft, double marginTop, double chartHeight)
+        public virtual RenderFragment RenderTooltip(object data)
         {
             var item = (TItem)data;
+            
+            return builder =>
+            {
+                if (Chart.Tooltip.Shared)
+                {
+                    var category = PropertyAccess.GetValue(item, CategoryProperty);
+                    builder.OpenComponent<ChartSharedTooltip>(0);
+                    builder.AddAttribute(1, nameof(ChartSharedTooltip.Class), TooltipClass(item));
+                    builder.AddAttribute(2, nameof(ChartSharedTooltip.Title), TooltipTitle(item));
+                    builder.AddAttribute(3, nameof(ChartSharedTooltip.ChildContent), RenderSharedTooltipItems(category));
+                    builder.CloseComponent();
+                }
+                else
+                {
+                    builder.OpenComponent<ChartTooltip>(0);
+                    builder.AddAttribute(1, nameof(ChartTooltip.ChildContent), TooltipTemplate?.Invoke(item));
+                    builder.AddAttribute(2, nameof(ChartTooltip.Title), TooltipTitle(item));
+                    builder.AddAttribute(3, nameof(ChartTooltip.Label), TooltipLabel(item));
+                    builder.AddAttribute(4, nameof(ChartTooltip.Value), TooltipValue(item));
+                    builder.AddAttribute(5, nameof(ChartTooltip.Class), TooltipClass(item));
+                    builder.AddAttribute(6, nameof(ChartTooltip.Style), TooltipStyle(item));
+                    builder.CloseComponent();
+                }
+            };
+        }
 
+        private RenderFragment RenderSharedTooltipItems(object category)
+        {
+            return builder =>
+            {
+                var visibleSeries = Chart.Series.Where(s => s.Visible).ToList();
+
+                foreach (var series in visibleSeries)
+                {
+                    builder.AddContent(1, series.RenderSharedTooltipItem(category));
+                }
+            };
+        }
+
+        /// <inheritdoc />
+        public virtual RenderFragment RenderSharedTooltipItem(object category)
+        {
+            return builder =>
+            {
+                var item = Items.FirstOrDefault(i => object.Equals(PropertyAccess.GetValue(i, CategoryProperty), category));
+
+                if (item != null)
+                {
+                    builder.OpenComponent<ChartSharedTooltipItem>(0);
+                    builder.AddAttribute(1, nameof(ChartSharedTooltipItem.Value), TooltipValue(item));
+                    builder.AddAttribute(2, nameof(ChartSharedTooltipItem.ChildContent), TooltipTemplate?.Invoke(item));
+                    builder.AddAttribute(3, nameof(ChartSharedTooltipItem.LegendItem), RenderLegendItem(false));
+                    builder.CloseComponent();
+                }
+            };
+        }
+
+        /// <inheritdoc />
+        public Point GetTooltipPosition(object data)
+        {
+            var item = (TItem)data;
             var x = TooltipX(item);
             var y = TooltipY(item);
 
-            return builder =>
-            {
-                builder.OpenComponent<ChartTooltip>(0);
-                builder.AddAttribute(1, nameof(ChartTooltip.X), x + marginLeft);
-                builder.AddAttribute(2, nameof(ChartTooltip.Y), y + marginTop);
-
-                builder.AddAttribute(3, nameof(ChartTooltip.ChildContent), TooltipTemplate?.Invoke(item));
-
-                builder.AddAttribute(4, nameof(ChartTooltip.Title), TooltipTitle(item));
-                builder.AddAttribute(5, nameof(ChartTooltip.Label), TooltipLabel(item));
-                builder.AddAttribute(6, nameof(ChartTooltip.Value), TooltipValue(item));
-                builder.AddAttribute(7, nameof(ChartTooltip.Class), TooltipClass(item));
-                builder.AddAttribute(8, nameof(ChartTooltip.Style), TooltipStyle(item));
-                builder.CloseComponent();
-            };
+            return new Point { X = x, Y = y };
         }
 
         /// <summary>
@@ -517,6 +569,14 @@ namespace Radzen.Blazor
         /// <inheritdoc />
         public virtual RenderFragment RenderLegendItem()
         {
+            return RenderLegendItem(true);
+        }
+
+        /// <summary>
+        /// Renders the legend item for this series.
+        /// </summary>
+        protected virtual RenderFragment RenderLegendItem(bool clickable)
+        {
             var style = new List<string>();
 
             if (IsVisible == false)
@@ -534,6 +594,7 @@ namespace Radzen.Blazor
                 builder.AddAttribute(5, nameof(LegendItem.MarkerSize), MarkerSize);
                 builder.AddAttribute(6, nameof(LegendItem.Text), GetTitle());
                 builder.AddAttribute(7, nameof(LegendItem.Click), EventCallback.Factory.Create(this, OnLegendItemClick));
+                builder.AddAttribute(8, nameof(LegendItem.Clickable), clickable);
                 builder.CloseComponent();
             };
         }
@@ -563,13 +624,13 @@ namespace Radzen.Blazor
         /// <inheritdoc />
         public double GetMean()
         {
-            return Data.Select(e => Value(e)).Average();
+            return Data.Select(e => Value(e)).DefaultIfEmpty(double.NaN).Average();
         }
 
         /// <inheritdoc />
         public double GetMode()
         {
-            return Data.GroupBy(e => Value(e)).Select(g => new { Value = g.Key, Count = g.Count() }).OrderByDescending(e => e.Count).FirstOrDefault().Value;
+            return Data.Any() ? Data.GroupBy(e => Value(e)).Select(g => new { Value = g.Key, Count = g.Count() }).OrderByDescending(e => e.Count).FirstOrDefault().Value : double.NaN;
         }
 
         /// <summary>
@@ -577,35 +638,38 @@ namespace Radzen.Blazor
         /// </summary>
         public (double a, double b) GetTrend()
         {
-            double a, b;
+            double a = double.NaN, b = double.NaN;
 
-            Func<TItem, double> X;
-            Func<TItem, double> Y;
-            if (Chart.ShouldInvertAxes())
+            if (Data.Any())
             {
-                X = e => Chart.CategoryScale.Scale(Value(e));
-                Y = e => Chart.ValueScale.Scale(Category(Chart.ValueScale)(e));
-            }
-            else
-            {
-                X = e => Chart.CategoryScale.Scale(Category(Chart.CategoryScale)(e));
-                Y = e => Chart.ValueScale.Scale(Value(e));
-            }
+                Func<TItem, double> X;
+                Func<TItem, double> Y;
+                if (Chart.ShouldInvertAxes())
+                {
+                    X = e => Chart.CategoryScale.Scale(Value(e));
+                    Y = e => Chart.ValueScale.Scale(Category(Chart.ValueScale)(e));
+                }
+                else
+                {
+                    X = e => Chart.CategoryScale.Scale(Category(Chart.CategoryScale)(e));
+                    Y = e => Chart.ValueScale.Scale(Value(e));
+                }
 
-            var avgX = Data.Select(e => X(e)).Average();
-            var avgY = Data.Select(e => Y(e)).Average();
-            var sumXY = Data.Sum(e => (X(e) - avgX) * (Y(e) - avgY));
-            if (Chart.ShouldInvertAxes())
-            {
-                var sumYSq = Data.Sum(e => (Y(e) - avgY) * (Y(e) - avgY));
-                b = sumXY / sumYSq;
-                a = avgX - b * avgY;
-            }
-            else
-            {
-                var sumXSq = Data.Sum(e => (X(e) - avgX) * (X(e) - avgX));
-                b = sumXY / sumXSq;
-                a = avgY - b * avgX;
+                var avgX = Data.Select(e => X(e)).Average();
+                var avgY = Data.Select(e => Y(e)).Average();
+                var sumXY = Data.Sum(e => (X(e) - avgX) * (Y(e) - avgY));
+                if (Chart.ShouldInvertAxes())
+                {
+                    var sumYSq = Data.Sum(e => (Y(e) - avgY) * (Y(e) - avgY));
+                    b = sumXY / sumYSq;
+                    a = avgX - b * avgY;
+                }
+                else
+                {
+                    var sumXSq = Data.Sum(e => (X(e) - avgX) * (X(e) - avgX));
+                    b = sumXY / sumXSq;
+                    a = avgY - b * avgX;
+                }
             }
 
             return (a, b);
@@ -728,16 +792,25 @@ namespace Radzen.Blazor
         /// <param name="index">The index.</param>
         /// <param name="colors">The colors.</param>
         /// <param name="defaultValue">The default value.</param>
-        protected string PickColor(int index, IEnumerable<string> colors, string defaultValue = null)
+        /// <param name="colorRange">The color range value.</param>
+        /// <param name="value">The value of the item.</param>
+        protected string PickColor(int index, IEnumerable<string> colors, string defaultValue = null, IList<SeriesColorRange> colorRange = null, double value = 0.0)
         {
-            if (colors == null || !colors.Any())
+            if (colorRange != null)
             {
-                return defaultValue;
+                var result = colorRange.Where(r => r.Min <= value && r.Max >= value).FirstOrDefault<SeriesColorRange>();
+                return result != null ? result.Color : defaultValue;
             }
+            else
+            {
+                if (colors == null || !colors.Any())
+                {
+                    return defaultValue;
+                }
 
-            return colors.ElementAt(index % colors.Count());
+                return colors.ElementAt(index % colors.Count());
+            }
         }
-
         /// <inheritdoc />
         public void Dispose()
         {

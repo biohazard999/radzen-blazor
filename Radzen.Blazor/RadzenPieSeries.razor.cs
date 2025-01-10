@@ -111,22 +111,7 @@ namespace Radzen.Blazor
         /// Stores Data filtered to items greater than zero as an IList of <typeparamref name="TItem"/>.
         /// </summary>
         /// <value>The items.</value>
-        protected IList<TItem> PositiveItems { get; set; }
-
-        /// <inheritdoc />
-        public override async Task SetParametersAsync(ParameterView parameters)
-        {
-            await base.SetParametersAsync(parameters);
-
-            if (Items != null)
-            {
-                PositiveItems = Items.Where(e => Value(e) > 0).ToList();
-            }
-            else
-            {
-                PositiveItems = new List<TItem>();
-            }
-        }
+        protected IList<TItem> PositiveItems => Items != null ? Items.Where(e => Value(e) > 0).ToList() : new List<TItem>();
 
         /// <inheritdoc />
         public override double MeasureLegend()
@@ -140,7 +125,7 @@ namespace Radzen.Blazor
         }
 
         /// <inheritdoc />
-        public override RenderFragment RenderLegendItem()
+        protected override RenderFragment RenderLegendItem(bool clickable)
         {
             return builder =>
             {
@@ -153,6 +138,7 @@ namespace Radzen.Blazor
                     builder.AddAttribute(4, nameof(LegendItem.MarkerType), MarkerType);
                     builder.AddAttribute(5, nameof(LegendItem.Color), PickColor(Items.IndexOf(data), Fills));
                     builder.AddAttribute(6, nameof(LegendItem.Click), EventCallback.Factory.Create(this, () => OnLegendClick(data)));
+                    builder.AddAttribute(7, nameof(LegendItem.Clickable), clickable);
                     builder.CloseComponent();
                 };
             };
@@ -204,6 +190,12 @@ namespace Radzen.Blazor
             foreach (var data in Items)
             {
                 var value = Value(data);
+
+                if (value == 0)
+                {
+                    continue;
+                }
+
                 var endAngle = startAngle - value / sum * TotalAngle; // assuming clockwise
 
                 // Normalize the endAngle
@@ -250,11 +242,12 @@ namespace Radzen.Blazor
 
         private double TooltipAngle(TItem item)
         {
-            var sum = PositiveItems.Sum(Value);
+            var items = PositiveItems;
+            var sum = items.Sum(Value);
             var startAngle = StartAngle;
             var endAngle = 0d;
 
-            foreach (var data in PositiveItems)
+            foreach (var data in items)
             {
                 var value = Value(data);
                 var sweepAngle = value / sum * TotalAngle;

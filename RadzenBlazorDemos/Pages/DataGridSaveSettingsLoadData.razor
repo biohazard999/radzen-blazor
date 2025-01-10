@@ -20,20 +20,20 @@
                 AllowSorting="true" AllowMultiColumnSorting="true" ShowMultiColumnSortingIndex="true"
                 AllowColumnResize="true" AllowColumnReorder="true" ColumnWidth="200px"
                 FilterPopupRenderMode="PopupRenderMode.OnDemand" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
-                Data="@employees" IsLoading=@isLoading Count="@count" LoadData=@LoadData TItem="Employee"
+                Data="@employees" IsLoading=@isLoading Count="@count" LoadData=@LoadData
                 PageSize="@pageSize" PageSizeOptions="@pageSizeOptions" ShowPagingSummary="true" PageSizeChanged="@(args => pageSize = args)">
     <Columns>
-        <RadzenDataGridColumn TItem="Employee" Property="Photo" Title="Employee" Sortable="false" Filterable="false">
+        <RadzenDataGridColumn Property="@nameof(Employee.Photo)" Title="Employee" Sortable="false" Filterable="false">
             <Template Context="data">
-                <RadzenImage Path="@data.Photo" style="width: 40px; height: 40px; border-radius: 8px; margin-right: 8px;" />
+                <RadzenImage Path="@data.Photo" Style="width: 40px; height: 40px;" class="rz-border-radius-2 rz-me-2" AlternateText="@(data.FirstName + " " + data.LastName)" />
                 @data.FirstName @data.LastName
             </Template>
         </RadzenDataGridColumn>
-        <RadzenDataGridColumn TItem="Employee" Property="Title" Title="Title" />
-        <RadzenDataGridColumn TItem="Employee" Property="EmployeeID" Title="Employee ID" />
-        <RadzenDataGridColumn TItem="Employee" Property="HireDate" Title="Hire Date" FormatString="{0:d}" />
-        <RadzenDataGridColumn TItem="Employee" Property="City" Title="City" />
-        <RadzenDataGridColumn TItem="Employee" Property="Country" Title="Country" />
+        <RadzenDataGridColumn Property="@nameof(Employee.Title)" Title="Title" />
+        <RadzenDataGridColumn Property="@nameof(Employee.EmployeeID)" Title="Employee ID" />
+        <RadzenDataGridColumn Property="@nameof(Employee.HireDate)" Title="Hire Date" FormatString="{0:d}" />
+        <RadzenDataGridColumn Property="@nameof(Employee.City)" Title="City" />
+        <RadzenDataGridColumn Property="@nameof(Employee.Country)" Title="Country" />
     </Columns>
 </RadzenDataGrid>
 
@@ -49,7 +49,6 @@
 
     int count;
     bool isLoading = false;
-    bool loaded;
     async Task LoadData(LoadDataArgs args)
     {
         console.Log("LoadData");
@@ -77,8 +76,6 @@
         employees = await Task.FromResult(query.Skip(args.Skip.Value).Take(args.Top.Value).ToList());
 
         isLoading = false;
-
-        loaded = true;
     }
 
     DataGridSettings _settings;
@@ -103,12 +100,13 @@
     {
         console.Log("LoadStateAsync");
         var result = await JSRuntime.InvokeAsync<string>("window.localStorage.getItem", "SettingsLoadData");
-        if (!string.IsNullOrEmpty(result))
+        if (!string.IsNullOrEmpty(result) && result != "null")
         {
             _settings = JsonSerializer.Deserialize<DataGridSettings>(result);
             if (_settings.PageSize.HasValue)
             {
                 pageSize = _settings.PageSize.Value;
+                await Task.Yield();
             }
         }
     }
