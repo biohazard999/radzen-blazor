@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Radzen.Blazor;
+using Radzen.Blazor.Rendering;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Linq.Dynamic.Core;
 using System.Linq.Dynamic.Core.Parser;
@@ -14,6 +16,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Radzen
@@ -289,9 +292,84 @@ namespace Radzen
             services.AddScoped<NotificationService>();
             services.AddScoped<TooltipService>();
             services.AddScoped<ContextMenuService>();
+            services.AddScoped<ThemeService>();
 
             return services;
         }
+    }
+
+    /// <summary>
+    /// SecurityCodeType enum
+    /// </summary>
+    public enum SecurityCodeType
+    {
+        /// <summary>
+        /// January.
+        /// </summary>
+        String = 0,
+        /// <summary>
+        /// February
+        /// </summary>
+        Numeric = 1,
+        /// <summary>
+        /// March
+        /// </summary>
+        Password = 2
+    }
+
+    /// <summary>
+    /// Month enum
+    /// </summary>
+    public enum Month
+    {
+        /// <summary>
+        /// January.
+        /// </summary>
+        January = 0,
+        /// <summary>
+        /// February
+        /// </summary>
+        February = 1,
+        /// <summary>
+        /// March
+        /// </summary>
+        March = 2,
+        /// <summary>
+        /// April
+        /// </summary>
+        April = 3,
+        /// <summary>
+        /// May
+        /// </summary>
+        May = 4,
+        /// <summary>
+        /// June
+        /// </summary>
+        June = 5,
+        /// <summary>
+        /// July
+        /// </summary>
+        July = 6,
+        /// <summary>
+        /// August
+        /// </summary>
+        August = 7,
+        /// <summary>
+        /// September
+        /// </summary>
+        September = 8,
+        /// <summary>
+        /// October
+        /// </summary>
+        October = 9,
+        /// <summary>
+        /// November
+        /// </summary>
+        November = 10,
+        /// <summary>
+        /// December
+        /// </summary>
+        December = 11,
     }
 
     /// <summary>
@@ -388,6 +466,11 @@ namespace Radzen
         /// LogicalFilterOperator.
         /// </summary>
         public LogicalFilterOperator LogicalFilterOperator { get; set; }
+
+        /// <summary>
+        /// CustomFilterExpression.
+        /// </summary>
+        public string CustomFilterExpression { get; set; }
     }
 #if NET7_0_OR_GREATER
 #else
@@ -422,6 +505,143 @@ namespace Radzen
         /// Refreshes this instance.
         /// </summary>
         void Refresh();
+    }
+
+    /// <summary>
+    /// Supplies information about RadzenDropZoneContainer CanDrop function and RadzenDropZone Drop event.
+    /// </summary>
+    public class RadzenDropZoneItemEventArgs<TItem>
+    {
+        /// <summary>
+        /// Gets the dragged item zone.
+        /// </summary>
+        public RadzenDropZone<TItem> FromZone { get; internal set; }
+
+        /// <summary>
+        /// Gets the drop zone.
+        /// </summary>
+        public RadzenDropZone<TItem> ToZone { get; internal set; }
+
+        /// <summary>
+        /// Gets the dragged item.
+        /// </summary>
+        public TItem Item { get; internal set; }
+
+        /// <summary>
+        /// Gets the dropped item.
+        /// </summary>
+        public TItem ToItem { get; internal set; }
+
+        /// <summary>
+        /// The data that underlies a drag-and-drop operation, known as the drag data store.
+        /// See <see cref="DataTransfer"/>.
+        /// </summary>
+        public DataTransfer DataTransfer { get; set; } = default!;
+    }
+
+    /// <summary>
+    /// Supplies information about RadzenDropZoneContainer ItemRender event.
+    /// </summary>
+    public class RadzenDropZoneItemRenderEventArgs<TItem>
+    {
+        /// <summary>
+        /// Gets the drop zone.
+        /// </summary>
+        public RadzenDropZone<TItem> Zone { get; internal set; }
+
+        /// <summary>
+        /// Gets the dragged item.
+        /// </summary>
+        public TItem Item { get; internal set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this item is visible.
+        /// </summary>
+        /// <value><c>true</c> if visible; otherwise, <c>false</c>.</value>
+        public bool Visible { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets the row HTML attributes.
+        /// </summary>
+        public IDictionary<string, object> Attributes { get; private set; } = new Dictionary<string, object>();
+    }
+
+    /// <summary>
+    /// Supplies information about RadzenDropDown ItemRender event.
+    /// </summary>
+    public class DropDownBaseItemRenderEventArgs<TValue>
+    {
+        /// <summary>
+        /// Gets the data item.
+        /// </summary>
+        public object Item { get; internal set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this item is visible.
+        /// </summary>
+        /// <value><c>true</c> if visible; otherwise, <c>false</c>.</value>
+        public bool Visible { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this item is visible.
+        /// </summary>
+        /// <value><c>true</c> if visible; otherwise, <c>false</c>.</value>
+        public bool Disabled { get; set; }
+
+        /// <summary>
+        /// Gets or sets the row HTML attributes.
+        /// </summary>
+        public IDictionary<string, object> Attributes { get; private set; } = new Dictionary<string, object>();
+    }
+
+    /// <summary>
+    /// Supplies information about RadzenDropDown ItemRender event.
+    /// </summary>
+    public class DropDownItemRenderEventArgs<TValue> : DropDownBaseItemRenderEventArgs<TValue>
+    {
+        /// <summary>
+        /// Gets the DropDown.
+        /// </summary>
+        public RadzenDropDown<TValue> DropDown { get; internal set; }
+    }
+
+    /// <summary>
+    /// Supplies information about RadzenDropDown ItemRender event.
+    /// </summary>
+    public class ListBoxItemRenderEventArgs<TValue> : DropDownBaseItemRenderEventArgs<TValue>
+    {
+        /// <summary>
+        /// Gets the DropDown.
+        /// </summary>
+        public RadzenListBox<TValue> ListBox { get; internal set; }
+    }
+
+    /// <summary>
+    /// Supplies information about RadzenPickList ItemRender event.
+    /// </summary>
+    public class PickListItemRenderEventArgs<TItem>
+    {
+        /// <summary>
+        /// Gets the data item.
+        /// </summary>
+        public TItem Item { get; internal set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this item is visible.
+        /// </summary>
+        /// <value><c>true</c> if visible; otherwise, <c>false</c>.</value>
+        public bool Visible { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether this item is visible.
+        /// </summary>
+        /// <value><c>true</c> if visible; otherwise, <c>false</c>.</value>
+        public bool Disabled { get; set; }
+
+        /// <summary>
+        /// Gets or sets the row HTML attributes.
+        /// </summary>
+        public IDictionary<string, object> Attributes { get; private set; } = new Dictionary<string, object>();
     }
 
     /// <summary>
@@ -504,6 +724,22 @@ namespace Radzen
     }
 
     /// <summary>
+    /// Supplies information about a <see cref="DropableViewBase.AppointmentMove" /> event that is being raised.
+    /// </summary>
+    public class SchedulerAppointmentMoveEventArgs
+    {
+        /// <summary>
+        /// Gets or sets the appointment data.
+        /// </summary>
+        public AppointmentData Appointment { get; set; }
+
+        /// <summary>
+        /// Gets or sets the time span.
+        /// </summary>
+        public TimeSpan TimeSpan { get; set; }
+    }
+
+    /// <summary>
     /// Supplies information about a <see cref="RadzenMenu.Click" /> event that is being raised.
     /// </summary>
     public class MenuItemEventArgs : MouseEventArgs
@@ -554,6 +790,11 @@ namespace Radzen
         /// </summary>
         /// <value><c>true</c> if expandable; otherwise, <c>false</c>.</value>
         public bool Expandable { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating row index.
+        /// </summary>
+        public int Index { get; set; }
     }
 
     /// <summary>
@@ -577,23 +818,6 @@ namespace Radzen
         /// <value><c>true</c> if expanded; otherwise, <c>false</c>.</value>
         public bool? Expanded { get; set; }
 
-        /// <summary>
-        /// Gets a value indicating whether this is the first time the RadzenGrid has rendered.
-        /// </summary>
-        /// <value><c>true</c> if this is the first time; otherwise, <c>false</c>.</value>
-        public bool FirstRender { get; internal set; }
-    }
-
-    /// <summary>
-    /// Supplies information about a <see cref="RadzenGrid{TItem}.Render" /> event that is being raised.
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public class GridRenderEventArgs<T>
-    {
-        /// <summary>
-        /// Gets the instance of the RadzenGrid component which has rendered.
-        /// </summary>
-        public RadzenGrid<T> Grid { get; internal set; }
         /// <summary>
         /// Gets a value indicating whether this is the first time the RadzenGrid has rendered.
         /// </summary>
@@ -630,18 +854,6 @@ namespace Radzen
     }
 
     /// <summary>
-    /// Supplies information about a <see cref="RadzenGrid{TItem}.CellRender" /> event that is being raised.
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public class CellRenderEventArgs<T> : RowRenderEventArgs<T>
-    {
-        /// <summary>
-        /// Gets the RadzenGridColumn which this cells represents.
-        /// </summary>
-        public RadzenGridColumn<T> Column { get; internal set; }
-    }
-
-    /// <summary>
     /// Supplies information about a <see cref="RadzenDataGrid{TItem}.CellRender" /> event that is being raised.
     /// </summary>
     /// <typeparam name="T"></typeparam>
@@ -668,6 +880,22 @@ namespace Radzen
         /// Gets the RadzenDataGridColumn which this cells represents.
         /// </summary>
         public RadzenDataGridColumn<T> Column { get; internal set; }
+    }
+
+    /// <summary>
+    /// Supplies information about a <see cref="RadzenTree.ItemContextMenu" /> event that is being raised.
+    /// </summary>
+    public class TreeItemContextMenuEventArgs : Microsoft.AspNetCore.Components.Web.MouseEventArgs
+    {
+        /// <summary>
+        /// Gets the tree item text.
+        /// </summary>
+        public string Text { get; internal set; }
+
+        /// <summary>
+        /// Gets the tree item value.
+        /// </summary>
+        public object Value { get; internal set; }
     }
 
     /// <summary>
@@ -744,17 +972,79 @@ namespace Radzen
     /// <summary>
     /// Represents a file which the user selects for upload via <see cref="RadzenUpload" />.
     /// </summary>
-    public class FileInfo
+    public class FileInfo : IBrowserFile
     {
+        /// <summary>
+        /// Creates FileInfo.
+        /// </summary>
+        public FileInfo()
+        {
+            //
+        }
+
+        IBrowserFile source;
+        /// <summary>
+        /// Creates FileInfo with IBrowserFile as source.
+        /// </summary>
+        public FileInfo(IBrowserFile source)
+        {
+            this.source = source;
+        }
+
+        string _name;
         /// <summary>
         /// Gets the name of the selected file.
         /// </summary>
-        public string Name { get; set; }
+        public string Name
+        {
+            get
+            {
+                return _name ?? source.Name;
+            }
+            set
+            {
+                _name = value;
+            }
+        }
 
+        long _size;
         /// <summary>
         /// Gets the size (in bytes) of the selected file.
         /// </summary>
-        public long Size { get; set; }
+        public long Size
+        {
+            get
+            {
+                return _size != default(long) ? _size : source != null ? source.Size : 0;
+            }
+            set
+            {
+                _size = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets the IBrowserFile.
+        /// </summary>
+        public IBrowserFile Source => source;
+
+        /// <summary>
+        /// Gets the LastModified.
+        /// </summary>
+        public DateTimeOffset LastModified => source.LastModified;
+
+        /// <summary>
+        /// Gets the ContentType.
+        /// </summary>
+        public string ContentType => source.ContentType;
+
+        /// <summary>
+        /// Open read stream.
+        /// </summary>
+        public System.IO.Stream OpenReadStream(long maxAllowedSize = 512000, CancellationToken cancellationToken = default)
+        {
+            return source.OpenReadStream(maxAllowedSize, cancellationToken);
+        }
     }
 
     /// <summary>
@@ -980,20 +1270,21 @@ namespace Radzen
     /// <summary>
     /// Specifies the position at which a Radzen Blazor component renders its built-in <see cref="RadzenPager" />.
     /// </summary>
+    [Flags]
     public enum PagerPosition
     {
         /// <summary>
         /// RadzenPager is displayed at the top of the component.
         /// </summary>
-        Top,
+        Top = 1,
         /// <summary>
         /// RadzenPager is displayed at the bottom of the component.
         /// </summary>
-        Bottom,
+        Bottom = 2,
         /// <summary>
         /// RadzenPager is displayed at the top and at the bottom of the component.
         /// </summary>
-        TopAndBottom
+        TopAndBottom = Top | Bottom
     }
 
     /// <summary>
@@ -1109,11 +1400,11 @@ namespace Radzen
         /// </summary>
         Light,
         /// <summary>
-        /// Dark styling. Similar to dark buttons.
+        /// Base styling. Similar to base buttons.
         /// </summary>
         Base,
         /// <summary>
-        /// The default styling.
+        /// Dark styling. Similar to dark buttons.
         /// </summary>
         Dark,
         /// <summary>
@@ -1198,11 +1489,11 @@ namespace Radzen
         /// </summary>
         Light,
         /// <summary>
-        /// Dark styling. Similar to dark buttons.
+        /// Base styling. Similar to base buttons.
         /// </summary>
         Base,
         /// <summary>
-        /// The default styling.
+        /// Dark styling. Similar to dark buttons.
         /// </summary>
         Dark,
         /// <summary>
@@ -1255,6 +1546,10 @@ namespace Radzen
         /// Light styling. Similar to light buttons.
         /// </summary>
         Light,
+        /// <summary>
+        /// Base styling. Similar to base buttons.
+        /// </summary>
+        Base,
         /// <summary>
         /// Dark styling. Similar to dark buttons.
         /// </summary>
@@ -1483,6 +1778,10 @@ namespace Radzen
         /// </summary>
         Light,
         /// <summary>
+        /// The base UI styling.
+        /// </summary>
+        Base,
+        /// <summary>
         /// A button with dark styling.
         /// </summary>
         Dark,
@@ -1570,7 +1869,11 @@ namespace Radzen
         /// <summary>
         /// The component displays a popup filtering UI and allows you to pick filtering operator and or filter by multiple values.
         /// </summary>
-        Advanced
+        Advanced,
+        /// <summary>
+        /// The component displays a popup filtering UI and allows you to pick multiple values from list of all values.
+        /// </summary>
+        CheckBoxList
     }
 
     /// <summary>
@@ -1668,15 +1971,15 @@ namespace Radzen
         /// </summary>
         DoesNotContain,
         /// <summary>
-        /// Satisfied if the current value is null.
+        /// Satisfied if the current value is in the specified value.
         /// </summary>
         In,
         /// <summary>
-        /// Satisfied if the current value is in the specified value.
+        /// Satisfied if the current value is not in the specified value.
         /// </summary>
         NotIn,
         /// <summary>
-        /// Satisfied if the current value is not in the specified value.
+        /// Satisfied if the current value is null.
         /// </summary>
         IsNull,
         /// <summary>
@@ -1690,7 +1993,7 @@ namespace Radzen
         /// <summary>
         /// Satisfied if the current value is not <see cref="string.Empty"/>.
         /// </summary>
-        IsNotEmpty, 
+        IsNotEmpty,
         /// <summary>
         /// Custom operator if not need to generate the filter.
         /// </summary>
@@ -1765,6 +2068,10 @@ namespace Radzen
         /// </summary>
         Light,
         /// <summary>
+        /// Base styling. Similar to base buttons.
+        /// </summary>
+        Base,
+        /// <summary>
         /// Dark styling. Similar to dark buttons.
         /// </summary>
         Dark,
@@ -1803,6 +2110,10 @@ namespace Radzen
         /// Light styling. Similar to light buttons.
         /// </summary>
         Light,
+        /// <summary>
+        /// Base styling. Similar to base buttons.
+        /// </summary>
+        Base,
         /// <summary>
         /// Dark styling. Similar to dark buttons.
         /// </summary>
@@ -1926,6 +2237,28 @@ namespace Radzen
     }
 
     /// <summary>
+    /// Supplies information about a <see cref="RadzenDataGrid{TItem}.ColumnReordering" /> event that is being raised.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public class DataGridColumnReorderingEventArgs<T>
+    {
+        /// <summary>
+        /// Gets the reordered RadzenDataGridColumn.
+        /// </summary>
+        public RadzenDataGridColumn<T> Column { get; internal set; }
+        /// <summary>
+        /// Gets the reordered to RadzenDataGridColumn.
+        /// </summary>
+        public RadzenDataGridColumn<T> ToColumn { get; internal set; }
+
+        /// <summary>
+        /// Gets or sets a value which will cancel the event.
+        /// </summary>
+        /// <value><c>true</c> to cancel the event; otherwise, <c>false</c>.</value>
+        public bool Cancel { get; set; }
+    }
+
+    /// <summary>
     /// Supplies information about a <see cref="RadzenDataGrid{TItem}.ColumnReordered" /> event that is being raised.
     /// </summary>
     /// <typeparam name="T"></typeparam>
@@ -1943,22 +2276,6 @@ namespace Radzen
         /// Gets the new index of the column.
         /// </summary>
         public int NewIndex { get; internal set; }
-    }
-
-    /// <summary>
-    /// Supplies information about a <see cref="RadzenGrid{TItem}.ColumnResized" /> event that is being raised.
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public class ColumnResizedEventArgs<T>
-    {
-        /// <summary>
-        /// Gets the resized RadzenGridColumn.
-        /// </summary>
-        public RadzenGridColumn<T> Column { get; internal set; }
-        /// <summary>
-        /// Gets the new width of the column.
-        /// </summary>
-        public double Width { get; internal set; }
     }
 
     /// <summary>
@@ -2019,7 +2336,7 @@ namespace Radzen
         /// Gets or sets the operator which will compare the property value with <see cref="FilterValue" />.
         /// </summary>
         /// <value>The filter operator.</value>
-        public FilterOperator FilterOperator { get; set; }
+        public FilterOperator? FilterOperator { get; set; }
 
         /// <summary>
         /// Gets or sets the logic used to combine the outcome of filtering by <see cref="FilterValue" />.
@@ -2073,6 +2390,12 @@ namespace Radzen
         /// </summary>
         /// <value>The title.</value>
         public string Title { get; set; }
+
+        /// <summary>
+        /// Gets or sets the format string used to display the key in the group.
+        /// </summary>
+        /// <value>The format string.</value>
+        public string FormatString { get; set; }
 
         /// <summary>
         /// Gets the title of the group.
@@ -2163,6 +2486,46 @@ namespace Radzen
         internal DataGridChildData<T> ParentChildData { get; set; }
         internal int Level { get; set; }
         internal IEnumerable<T> Data { get; set; }
+    }
+
+    /// <summary>
+    /// Supplies information about a <see cref="RadzenDataGrid{TItem}.LoadColumnFilterData" /> event that is being raised.
+    /// </summary>
+    public class DataGridLoadColumnFilterDataEventArgs<T>
+    {
+        /// <summary>
+        /// Gets or sets the data.
+        /// </summary>
+        /// <value>The data.</value>
+        public IEnumerable Data { get; set; }
+
+        /// <summary>
+        /// Gets or sets the total data count.
+        /// </summary>
+        /// <value>The total data count.</value>
+        public int Count { get; set; }
+
+        /// <summary>
+        /// Gets how many items to skip. Related to paging and the current page. Usually used with the <see cref="Enumerable.Skip{TSource}(IEnumerable{TSource}, int)"/> LINQ method.
+        /// </summary>
+        public int? Skip { get; set; }
+        /// <summary>
+        /// Gets how many items to take. Related to paging and the current page size. Usually used with the <see cref="Enumerable.Take{TSource}(IEnumerable{TSource}, int)"/> LINQ method.
+        /// </summary>
+        /// <value>The top.</value>
+        public int? Top { get; set; }
+
+        /// <summary>
+        /// Gets the filter expression as a string.
+        /// </summary>
+        /// <value>The filter.</value>
+        public string Filter { get; internal set; }
+
+        /// <summary>
+        /// Gets the column.
+        /// </summary>
+        /// <value>The column.</value>
+        public RadzenDataGridColumn<T> Column { get; internal set; }
     }
 
     /// <summary>
@@ -2434,9 +2797,17 @@ namespace Radzen
         /// </summary>
         public Func<object, string> Text { get; set; }
         /// <summary>
+        /// Gets or sets the function which returns a value for the <see cref="RadzenTreeItem.Checkable" /> of a child item.
+        /// </summary>
+        public Func<object, bool> Checkable { get; set; }
+        /// <summary>
         /// Gets or sets the name of the property which provides the value for the <see cref="RadzenTreeItem.Text" /> of a child item.
         /// </summary>
         public string TextProperty { get; set; }
+        /// <summary>
+        /// Gets or sets the name of the property which provides the value for the <see cref="RadzenTreeItem.Checkable" /> of a child item.
+        /// </summary>
+        public string CheckableProperty { get; set; }
         /// <summary>
         /// Gets or sets a function which returns whether a child item has children of its own. Called with an item from <see cref="Data" />.
         /// By default all items are considered to have children.
@@ -2457,6 +2828,51 @@ namespace Radzen
         /// </summary>
         /// <value>The template.</value>
         public RenderFragment<RadzenTreeItem> Template { get; set; }
+    }
+
+    /// <summary>
+    /// Supplies information about a <see cref="RadzenTree" /> item render event that is being raised.
+    /// </summary>
+    public class TreeItemRenderEventArgs
+    {
+        /// <summary>
+        /// Gets or sets the item HTML attributes.
+        /// </summary>
+        public IDictionary<string, object> Attributes { get; private set; } = new Dictionary<string, object>();
+
+        bool _checkedSet;
+        internal bool CheckedSet()
+        {
+            return _checkedSet;
+        }
+
+        bool? _checked;
+        /// <summary>
+        /// Gets or sets a value indicating whether this item is checked.
+        /// </summary>
+        /// <value><c>true</c> if expanded; otherwise, <c>false</c>.</value>
+        public bool? Checked
+        {
+            get
+            {
+                return _checked;
+            }
+            set
+            {
+                _checkedSet = true;
+                _checked = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets tree item.
+        /// </summary>
+        public object Value { get; internal set; }
+
+        /// <summary>
+        /// Gets child items.
+        /// </summary>
+        public IEnumerable Data { get; internal set; }
     }
 
     /// <summary>
@@ -2487,9 +2903,14 @@ namespace Radzen
         /// </summary>
         /// <param name="value">The value.</param>
         /// <param name="type">The type.</param>
+        /// <param name="culture">The culture.</param>
         /// <returns>System.Object</returns>
-        public static object ChangeType(object value, Type type)
+        public static object ChangeType(object value, Type type, CultureInfo culture = null)
         {
+            if (culture == null)
+            {
+                culture = CultureInfo.CurrentCulture;
+            }
             if (value == null && Nullable.GetUnderlyingType(type) != null)
             {
                 return value;
@@ -2517,7 +2938,7 @@ namespace Radzen
 
             }
 
-            return value is IConvertible ? Convert.ChangeType(value, Nullable.GetUnderlyingType(type) ?? type) : value;
+            return value is IConvertible ? Convert.ChangeType(value, Nullable.GetUnderlyingType(type) ?? type, culture) : value;
         }
     }
 
@@ -2607,8 +3028,46 @@ namespace Radzen
             {
                 return true;
             }
-
+#if NET6_0_OR_GREATER
+            if (type == typeof(DateOnly))
+            {
+                return true;
+            }
+#endif
             return false;
+        }
+
+        /// <summary>
+        /// Determines whether the specified type is a DateOnly.
+        /// </summary>
+        /// <param name="source">The source.</param>
+        /// <returns><c>true</c> if the specified type is a DateOnly instance or nullable DateOnly; otherwise, <c>false</c>.</returns>
+        public static bool IsDateOnly(Type source)
+        {
+            if (source == null) return false;
+            var type = source.IsGenericType ? source.GetGenericArguments()[0] : source;
+
+#if NET6_0_OR_GREATER
+            if (type == typeof(DateOnly))
+            {
+                return true;
+            }
+#endif
+            return false;
+        }
+
+        /// <summary>
+        /// Determines whether the specified type is a DateOnly.
+        /// </summary>
+        /// <param name="source">The source.</param>
+        /// <returns><c>true</c> if the specified type is a DateOnly instance or nullable DateOnly; otherwise, <c>false</c>.</returns>
+        public static object DateOnlyFromDateTime(DateTime source)
+        {
+            object result = null;
+#if NET6_0_OR_GREATER
+            result = DateOnly.FromDateTime(source);
+#endif
+            return result;
         }
 
         /// <summary>
@@ -2696,7 +3155,7 @@ namespace Radzen
         {
             var type = data.GetType();
             var arg = Expression.Parameter(typeof(object));
-            var body = Expression.Property(Expression.Convert(arg, type), propertyName);
+            var body = Expression.Convert(Expression.Property(Expression.Convert(arg, type), propertyName), typeof(T));
 
             return Expression.Lambda<Func<object, T>>(body, arg).Compile();
         }
@@ -2824,7 +3283,7 @@ namespace Radzen
             }
             return false;
         }
-        
+
         /// <summary>
         /// Method to only replace first occurence of a substring in a string
         /// </summary>
@@ -2872,6 +3331,21 @@ namespace Radzen
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Gets the dynamic property expression when binding to IDictionary.
+        /// </summary>
+        /// <param name="name">The property name.</param>
+        /// <param name="type">The property type.</param>
+        /// <returns>Dynamic property expression.</returns>
+        public static string GetDynamicPropertyExpression(string name, Type type)
+        {
+            var isEnum = type.IsEnum || Nullable.GetUnderlyingType(type)?.IsEnum == true;
+            var typeName = isEnum ? "Enum" : (Nullable.GetUnderlyingType(type) ?? type).Name;
+            var typeFunc = $@"{typeName}{(!isEnum && Nullable.GetUnderlyingType(type) != null ? "?" : "")}";
+
+            return $@"{typeFunc}(it[""{name}""])";
         }
     }
 
@@ -2932,12 +3406,26 @@ namespace Radzen
         /// </summary>
         /// <value>The field identifier.</value>
         FieldIdentifier FieldIdentifier { get; }
-#if NET5_0_OR_GREATER
+
         /// <summary>
         /// Sets the focus.
         /// </summary>
         ValueTask FocusAsync();
-#endif
+
+        /// <summary>
+        /// Sets the Disabled state of the component
+        /// </summary>
+        bool Disabled { get; set; }
+
+        /// <summary>
+        /// Sets the Visible state of the component
+        /// </summary>
+        bool Visible { get; set; }
+
+        /// <summary>
+        /// Sets the FormFieldContext of the component
+        /// </summary>
+        IFormFieldContext FormFieldContext { get; }
     }
 
     /// <summary>

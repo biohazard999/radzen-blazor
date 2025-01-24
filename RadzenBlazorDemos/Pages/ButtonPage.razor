@@ -1,10 +1,11 @@
 ﻿@page "/buttons"
 @page "/button"
+@page "/docs/guides/components/button.html"
 
 <RadzenText TextStyle="TextStyle.H2" TagName="TagName.H1" class="rz-pt-8">
     Button
 </RadzenText>
-<RadzenText TextStyle="TextStyle.Subtitle1" class="rz-pb-4">
+<RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.P" class="rz-pb-4">
     Demonstration and configuration of the Radzen Blazor <strong>Button</strong> component.
 </RadzenText>
 
@@ -18,7 +19,7 @@
     <ButtonFilled />
 </RadzenExample>
 
-<RadzenText Anchor="buttons#filled-buttons" TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-12">
+<RadzenText Anchor="buttons#flat-buttons" TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-12">
     Flat Buttons
 </RadzenText>
 <RadzenText TextStyle="TextStyle.Body1" class="rz-mb-8">
@@ -28,7 +29,7 @@
     <ButtonFlat />
 </RadzenExample>
 
-<RadzenText Anchor="buttons#filled-buttons" TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-12">
+<RadzenText Anchor="buttons#outlined-buttons" TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-12">
     Outlined Buttons
 </RadzenText>
 <RadzenText TextStyle="TextStyle.Body1" class="rz-mb-8">
@@ -38,7 +39,7 @@
     <ButtonOutlined />
 </RadzenExample>
 
-<RadzenText Anchor="buttons#filled-buttons" TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-12">
+<RadzenText Anchor="buttons#text-buttons" TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-12">
     Text Buttons
 </RadzenText>
 <RadzenText TextStyle="TextStyle.Body1" class="rz-mb-8">
@@ -48,11 +49,11 @@
     <ButtonText />
 </RadzenExample>
 
-<RadzenText Anchor="buttons#filled-buttons" TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-12">
+<RadzenText Anchor="buttons#content-in-buttons" TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-12">
     Content in Buttons
 </RadzenText>
 <RadzenText TextStyle="TextStyle.Body1" class="rz-mb-8">
-    Text, icons and images can be added to a button. 
+    Text, icons and images can be added to a button.
 </RadzenText>
 <RadzenExample ComponentName="Button" Example="ButtonContent">
     <ButtonContent />
@@ -68,7 +69,7 @@
     <ButtonSizes />
 </RadzenExample>
 
-<RadzenText Anchor="buttons#button-sizes" TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-12">
+<RadzenText Anchor="buttons#fab" TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-12">
     FAB
 </RadzenText>
 <RadzenText TextStyle="TextStyle.Body1" class="rz-mb-8">
@@ -78,7 +79,7 @@
     <ButtonFab />
 </RadzenExample>
 
-<RadzenText Anchor="buttons#button-sizes" TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-12">
+<RadzenText Anchor="buttons#disabled-button" TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-12">
     Disabled Button
 </RadzenText>
 <RadzenText TextStyle="TextStyle.Body1" class="rz-mb-8">
@@ -88,7 +89,7 @@
     <ButtonDisabled />
 </RadzenExample>
 
-<RadzenText Anchor="buttons#button-sizes" TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-12">
+<RadzenText Anchor="buttons#busy-button" TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-12">
     Busy button
 </RadzenText>
 <RadzenText TextStyle="TextStyle.Body1" class="rz-mb-8">
@@ -97,3 +98,21 @@
 <RadzenExample ComponentName="Button" Example="ButtonBusy">
     <ButtonBusy />
 </RadzenExample>
+
+<RadzenText Anchor="buttons#keyboard-navigation" TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-12">
+    Keyboard Navigation
+</RadzenText>
+<RadzenText TextStyle="TextStyle.Body1" class="rz-mb-8">
+    The following keys or key combinations provide a way for users to navigate and interact with Radzen Blazor Button component.
+</RadzenText>
+
+<KeyboardNavigationDataGrid Data="@shortcuts" />
+
+@code {
+    public List<KeyboardShortcut> shortcuts = new()
+    {
+        new KeyboardShortcut { Key = "Tab", Action = "Navigate to a button." },
+        new KeyboardShortcut { Key = "Enter", Action = "Click the focused button." },
+        new KeyboardShortcut { Key = "Space", Action = "Click the focused button." }
+    };
+}

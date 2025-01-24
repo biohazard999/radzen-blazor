@@ -1,12 +1,31 @@
 ﻿@page "/example-upload"
+@page "/docs/guides/components/upload.html"
 
 <RadzenText TextStyle="TextStyle.H2" TagName="TagName.H1" class="rz-pt-8">
     Upload
 </RadzenText>
-<RadzenText TextStyle="TextStyle.Subtitle1" class="rz-pb-4">
+<RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.P" class="rz-pb-4">
     Demonstration and configuration of the Radzen Blazor <strong>Upload</strong> component.
 </RadzenText>
 
 <RadzenExample ComponentName="Upload" Example="UploadConfig">
     <UploadConfig />
 </RadzenExample>
+
+<RadzenText Anchor="example-upload#keyboard-navigation" TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-12">
+    Keyboard Navigation
+</RadzenText>
+<RadzenText TextStyle="TextStyle.Body1" class="rz-mb-8">
+    The following keys or key combinations provide a way for users to navigate and interact with Radzen Blazor Upload component.
+</RadzenText>
+
+<KeyboardNavigationDataGrid Data="@shortcuts" />
+
+@code {
+    public List<KeyboardShortcut> shortcuts = new()
+    {
+        new KeyboardShortcut { Key = "Tab", Action = "Navigate forward across Upload buttons." },
+        new KeyboardShortcut { Key = "Shift + Tab", Action = "Navigate backward across Upload buttons." },
+        new KeyboardShortcut { Key = "Enter or Space", Action = "Click the focused Upload button." }
+    };
+}

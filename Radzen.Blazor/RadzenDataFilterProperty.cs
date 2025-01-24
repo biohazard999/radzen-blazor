@@ -119,6 +119,13 @@ namespace Radzen.Blazor
         public string Property { get; set; }
 
         /// <summary>
+        /// Gets or sets the filter property name.
+        /// </summary>
+        /// <value>The filter property name.</value>
+        [Parameter]
+        public string FilterProperty { get; set; }
+
+        /// <summary>
         /// Gets or sets a value indicating whether this property is selected in the filter.
         /// </summary>
         /// <value><c>true</c>, if already selected; otherwise <c>false</c>.</value>
@@ -299,10 +306,10 @@ namespace Radzen.Blazor
             if (PropertyAccess.IsNullableEnum(FilterPropertyType))
                 return new FilterOperator[] { FilterOperator.Equals, FilterOperator.NotEquals, FilterOperator.IsNull, FilterOperator.IsNotNull };
 
-            if ((typeof(IEnumerable).IsAssignableFrom(FilterPropertyType) || typeof(IEnumerable<>).IsAssignableFrom(FilterPropertyType)) 
+            if ((typeof(IEnumerable).IsAssignableFrom(FilterPropertyType) || typeof(IEnumerable<>).IsAssignableFrom(FilterPropertyType))
                 && FilterPropertyType != typeof(string))
             {
-                return new FilterOperator[] 
+                var operators = new FilterOperator[]
                 {
                     FilterOperator.Contains,
                     FilterOperator.DoesNotContain,
@@ -313,6 +320,17 @@ namespace Radzen.Blazor
                     FilterOperator.IsEmpty,
                     FilterOperator.IsNotEmpty
                 };
+
+                if (!string.IsNullOrEmpty(Property))
+                {
+                    var type = PropertyAccess.GetPropertyType(typeof(TItem), Property);
+                    if ((typeof(IEnumerable).IsAssignableFrom(type) || typeof(IEnumerable<>).IsAssignableFrom(type)) && type != typeof(string))
+                    {
+                        operators = operators.Concat(new FilterOperator[] { FilterOperator.In, FilterOperator.NotIn }).ToArray();
+                    }
+                }
+
+                return operators;
             }
 
             return Enum.GetValues(typeof(FilterOperator)).Cast<FilterOperator>().Where(o => o != FilterOperator.In && o != FilterOperator.NotIn).Where(o => {
@@ -329,10 +347,16 @@ namespace Radzen.Blazor
         {
             switch (filterOperator)
             {
+                case FilterOperator.Custom:
+                    return DataFilter?.CustomText;
                 case FilterOperator.Contains:
                     return DataFilter?.ContainsText;
                 case FilterOperator.DoesNotContain:
                     return DataFilter?.DoesNotContainText;
+                case FilterOperator.In:
+                    return DataFilter?.InText;
+                case FilterOperator.NotIn:
+                    return DataFilter?.NotInText;
                 case FilterOperator.EndsWith:
                     return DataFilter?.EndsWithText;
                 case FilterOperator.Equals:

@@ -1,26 +1,15 @@
 $rating-color: var(--rz-secondary) !default;
-$rating-opacity: 0.5 !default;
+$rating-opacity: 1 !default;
 $rating-font-size: var(--rz-icon-size) !default;
 $rating-selected-color: var(--rz-primary) !default;
+$rating-focus-color: var(--rz-primary-darker) !default;
 $rating-disabled-color: var(--rz-text-disabled-color) !default;
 $rating-disabled-opacity: 0.3 !default;
 $rating-ban-icon: "highlight_off" !default;
 $rating-ban-icon-color: $rating-color !default;
 
-// Rating CSS variables
-
-:root {
-  --rz-rating-color: #{$rating-color};
-  --rz-rating-opacity: #{$rating-opacity};
-  --rz-rating-font-size: #{$rating-font-size};
-  --rz-rating-selected-color: #{$rating-selected-color};
-  --rz-rating-disabled-color: #{$rating-disabled-color};
-  --rz-rating-disabled-opacity: #{$rating-disabled-opacity};
-  --rz-rating-ban-icon: #{$rating-ban-icon};
-  --rz-rating-ban-icon-color: #{$rating-ban-icon-color};
-}
-
 .rz-rating {
+  box-sizing: border-box;
   display: inline-flex;
   font-size: var(--rz-rating-font-size);
   height: 1em;
@@ -57,7 +46,8 @@ $rating-ban-icon-color: $rating-color !default;
     opacity: var(--rz-rating-opacity);
 
     &:before {
-      content: "star_border";
+      content: "star";
+      font-variation-settings: "FILL" 0;
     }
   }
 
@@ -66,28 +56,25 @@ $rating-ban-icon-color: $rating-color !default;
 
     &:before {
       content: "star";
+      font-variation-settings: "FILL" 1;
     }
   }
-}
 
-.rz-rating:not(.rz-state-disabled):not(.rz-state-readonly) {
-  .rzi-star-o {
-    cursor: pointer;
+  &:not(.rz-state-disabled):not(.rz-state-readonly) {
 
-    &:hover {
-      color: var(--rz-rating-selected-color);
+    a:hover, a:focus-visible {
+      cursor: pointer;
 
-      &:before {
-        content: "star";
+      .rzi-star,
+      .rzi-star-o,
+      .rzi-ban {
+        color: var(--rz-rating-focus-color);
       }
     }
-  }
 
-  .rzi-ban {
-    cursor: pointer;
-
-    &:hover {
-      color: var(--rz-rating-selected-color);
+    a:focus-visible > span {
+      outline: var(--rz-outline-focus);
+      border-radius: var(--rz-border-radius)
     }
   }
 }

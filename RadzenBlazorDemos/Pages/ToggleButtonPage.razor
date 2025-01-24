@@ -3,10 +3,10 @@
 <RadzenText TextStyle="TextStyle.H2" TagName="TagName.H1" class="rz-pt-8">
     ToggleButton
 </RadzenText>
-<RadzenText TextStyle="TextStyle.Subtitle1" class="rz-pb-4">
+<RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.P" class="rz-pb-4">
     Radzen Blazor <strong>ToggleButton</strong> is a button that changes its appearance or color when activated and returns to its original state when deactivated.
 </RadzenText>
-<RadzenText TextStyle="TextStyle.Subtitle1" class="rz-pb-4">
+<RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.P" class="rz-pb-4">
 Toggle buttons are versatile and can be used for various purposes, including filtering. You could have toggle buttons for different categories or criteria, and users can activate or deactivate them to filter content based on their preferences. For example, if you have a list of items and each item belongs to a certain category, toggle buttons could be used to show or hide items from specific categories, creating a customized and dynamic filtering system.
 </RadzenText>
 
@@ -40,8 +40,6 @@ Toggle buttons are versatile and can be used for various purposes, including fil
     <ToggleButtonStyle />
 </RadzenExample>
 
-
-
 <RadzenText Anchor="toggle-button#variants" TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-12">
     ToggleButton Variants
 </RadzenText>
@@ -51,7 +49,6 @@ Toggle buttons are versatile and can be used for various purposes, including fil
 <RadzenExample ComponentName="ToggleButton" Example="ToggleButtonVariants">
     <ToggleButtonVariants />
 </RadzenExample>
-
 
 <RadzenText Anchor="toggle-button#content" TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-12">
     Content in ToggleButtons
@@ -82,3 +79,21 @@ Toggle buttons are versatile and can be used for various purposes, including fil
 <RadzenExample ComponentName="ToggleButton" Example="ToggleButtonDisabled">
     <ToggleButtonDisabled />
 </RadzenExample>
+
+<RadzenText Anchor="toggle-button#keyboard-navigation" TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-12">
+    Keyboard Navigation
+</RadzenText>
+<RadzenText TextStyle="TextStyle.Body1" class="rz-mb-8">
+    The following keys or key combinations provide a way for users to navigate and interact with Radzen Blazor ToggleButton component.
+</RadzenText>
+
+<KeyboardNavigationDataGrid Data="@shortcuts" />
+
+@code {
+    public List<KeyboardShortcut> shortcuts = new()
+    {
+        new KeyboardShortcut { Key = "Tab", Action = "Navigate to a ToggleButton." },
+        new KeyboardShortcut { Key = "Enter", Action = "Click and toggle the focused ToggleButton." },
+        new KeyboardShortcut { Key = "Space", Action = "Click and toggle the focused ToggleButton." }
+    };
+}
