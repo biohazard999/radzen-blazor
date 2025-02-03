@@ -207,6 +207,12 @@ namespace Radzen
         public string FirstPageAriaLabel { get; set; } = "Go to first page.";
 
         /// <summary>
+        /// Gets or sets the pager's optional previous page button's label text.
+        /// </summary>
+        [Parameter]
+        public string PrevPageLabel { get; set; }
+
+        /// <summary>
         /// Gets or sets the pager's previous page button's title attribute.
         /// </summary>
         [Parameter]
@@ -229,6 +235,12 @@ namespace Radzen
         /// </summary>
         [Parameter]
         public string LastPageAriaLabel { get; set; } = "Go to last page.";
+
+        /// <summary>
+        /// Gets or sets the pager's optional next page button's label text.
+        /// </summary>
+        [Parameter]
+        public string NextPageLabel { get; set; }
 
         /// <summary>
         /// Gets or sets the pager's next page button's title attribute.
@@ -342,18 +354,18 @@ namespace Radzen
         /// Called when [parameters set asynchronous].
         /// </summary>
         /// <returns>Task.</returns>
-        protected override Task OnParametersSetAsync()
+        protected override async Task OnParametersSetAsync()
         {
             if (Visible && !LoadData.HasDelegate)
             {
-                InvokeAsync(Reload);
+                await InvokeAsync(Reload);
             }
             else
             {
                 CalculatePager();
             }
 
-            return base.OnParametersSetAsync();
+            await base.OnParametersSetAsync();
         }
 
         /// <summary>

@@ -12,6 +12,12 @@ namespace Radzen
     /// </summary>
     public class RadzenComponent : ComponentBase, IDisposable
     {
+        static RadzenComponent()
+        {
+            System.Linq.Dynamic.Core.ParsingConfig.Default.AllowEqualsAndToStringMethodsOnObject = true;
+            System.Linq.Dynamic.Core.ParsingConfig.Default.RestrictOrderByToPropertyOrField = false;
+        }
+
         /// <summary>
         /// Specifies additional custom attributes that will be rendered by the component.
         /// </summary>
@@ -119,7 +125,7 @@ namespace Radzen
         /// Gets the unique identifier. 
         /// </summary>
         /// <returns>Returns the <c>id</c> attribute (if specified) or generates a random one.</returns>
-        protected string GetId()
+        protected virtual string GetId()
         {
             if (Attributes != null && Attributes.TryGetValue("id", out var id) && !string.IsNullOrEmpty(Convert.ToString(@id)))
             {

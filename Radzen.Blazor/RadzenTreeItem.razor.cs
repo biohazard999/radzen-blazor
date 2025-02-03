@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Radzen.Blazor.Rendering;
 using System;
 using System.Collections;
@@ -21,10 +22,18 @@ namespace Radzen.Blazor
         public IReadOnlyDictionary<string, object> Attributes { get; set; }
 
         ClassList ContentClassList => ClassList.Create("rz-treenode-content")
-                                               .Add("rz-treenode-content-selected", selected);
-        ClassList IconClassList => ClassList.Create("rz-tree-toggler rzi")
+                                               .Add("rz-treenode-content-selected", selected)
+                                               .Add("rz-state-focused", Tree.IsFocused(this))
+                                               .Add(Tree.ItemContentCssClass)
+                                               .Add(ContentCssClass);
+        ClassList IconClassList => ClassList.Create("notranslate rz-tree-toggler rzi")
                                                .Add("rzi-caret-down", clientExpanded)
-                                               .Add("rzi-caret-right", !clientExpanded);
+                                               .Add("rzi-caret-right", !clientExpanded)
+                                               .Add(Tree.ItemIconCssClass)
+                                               .Add(IconCssClass);
+        private ClassList LabelClassList => ClassList.Create("rz-treenode-label")
+                                               .Add(Tree.ItemLabelCssClass)
+                                               .Add(LabelCssClass);
         /// <summary>
         /// Gets or sets the child content.
         /// </summary>
@@ -43,6 +52,12 @@ namespace Radzen.Blazor
         /// </summary>
         [Parameter]
         public string Text { get; set; }
+
+        /// <summary>
+        /// Gets or sets value indicating if the tree item checkbox can be checked.
+        /// </summary>
+        [Parameter]
+        public bool Checkable { get; set; } = true;
 
         private bool expanded;
 
@@ -90,6 +105,24 @@ namespace Radzen.Blazor
         [Parameter]
         public IEnumerable Data { get; set; }
 
+        /// <summary>
+        /// Gets or sets the CSS classes added to the content.
+        /// </summary>
+        [Parameter]
+        public string ContentCssClass { get; set; }
+
+        /// <summary>
+        /// Gets or sets the CSS classes added to the icon.
+        /// </summary>
+        [Parameter]
+        public string IconCssClass { get; set; }
+
+        /// <summary>
+        /// Gets or sets the CSS classes added to the label.
+        /// </summary>
+        [Parameter]
+        public string LabelCssClass { get; set; }
+
         internal List<RadzenTreeItem> items = new List<RadzenTreeItem>();
 
         internal void AddItem(RadzenTreeItem item)
@@ -134,6 +167,11 @@ namespace Radzen.Blazor
                 }
                 else
                 {
+                    if (items.Count > 0)
+                    {
+                        Tree.RemoveFromCurrentItems(Tree.CurrentItems.IndexOf(items[0]), items.Count);
+                    }
+
                     if (Tree != null)
                     {
                         await Tree.Collapse.InvokeAsync(new TreeEventArgs()
@@ -156,6 +194,33 @@ namespace Radzen.Blazor
             }
         }
 
+        internal async Task ExpandCollapse(bool value)
+        {
+            expanded = value;
+            clientExpanded = value;
+
+            if (expanded || clientExpanded)
+            {
+                await Expand();
+            }
+            else
+            {
+                if (items.Count > 0)
+                {
+                    Tree.RemoveFromCurrentItems(Tree.CurrentItems.IndexOf(items[0]), items.Count);
+                }
+
+                if (Tree != null)
+                {
+                    await Tree.Collapse.InvokeAsync(new TreeEventArgs()
+                    {
+                        Text = Text,
+                        Value = Value
+                    });
+                }
+            }
+        }
+
         async Task Expand()
         {
             if (Tree != null)
@@ -164,7 +229,7 @@ namespace Radzen.Blazor
 
                 if (Tree.SingleExpand)
                 {
-                    var siblings = ParentItem?.items ?? Tree.items;
+                    var siblings = (ParentItem?.items ?? Tree.items).ToList();
 
                     foreach (var sibling in siblings)
                     {
@@ -220,6 +285,10 @@ namespace Radzen.Blazor
             if (ParentItem != null)
             {
                 ParentItem.AddItem(this);
+
+                var currentItems = Tree.items;
+
+                Tree.InsertInCurrentItems(currentItems.IndexOf(ParentItem) + (ParentItem != null ? ParentItem.items.Count : 0), this);
             }
         }
 
@@ -265,7 +334,7 @@ namespace Radzen.Blazor
             await base.SetParametersAsync(parameters);
         }
 
-        async Task CheckedChange(bool? value)
+        internal async Task CheckedChange(bool? value)
         {
             if (Tree != null)
             {
@@ -307,7 +376,7 @@ namespace Radzen.Blazor
             }
         }
 
-        bool? IsChecked()
+        internal bool? IsChecked()
         {
             var checkedValues = GetCheckedValues();
 
@@ -324,7 +393,7 @@ namespace Radzen.Blazor
             return Tree.CheckedValues != null ? Tree.CheckedValues : Enumerable.Empty<object>();
         }
 
-        IEnumerable<object> GetAllChildValues(Func<object, bool> predicate = null)
+        internal IEnumerable<object> GetAllChildValues(Func<object, bool> predicate = null)
         {
             var children = items.Concat(items.SelectManyRecursive(i => i.items)).Select(i => i.Value);
 
@@ -393,6 +462,28 @@ namespace Radzen.Blazor
             }
 
             return false;
+        }
+
+        async Task OnContextMenu(MouseEventArgs args)
+        {
+            await Tree.ItemContextMenu.InvokeAsync(new TreeItemContextMenuEventArgs()
+            {
+                Text = Text,
+                Value = Value,
+                AltKey = args.AltKey,
+                Button = args.Button,
+                Buttons = args.Buttons,
+                ClientX = args.ClientX,
+                ClientY = args.ClientY,
+                CtrlKey = args.CtrlKey,
+                Detail = args.Detail,
+                MetaKey = args.MetaKey,
+                OffsetX = args.OffsetX,
+                OffsetY = args.OffsetY,
+                ScreenX = args.ScreenX,
+                ScreenY = args.ScreenY,
+                ShiftKey = args.ShiftKey
+            });
         }
     }
 }

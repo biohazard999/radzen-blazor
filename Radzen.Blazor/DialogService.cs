@@ -2,6 +2,7 @@
 using Microsoft.JSInterop;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -24,7 +25,7 @@ namespace Radzen
     ///          &lt;div class="row"&gt;
     ///              &lt;div class="col-md-12"&gt;
     ///                  &lt;RadzenButton Text="Ok" Click="() =&gt; ds.Close(true)" Style="margin-bottom: 10px; width: 150px" /&gt;
-    ///                  &lt;RadzenButton Text="Cancel" Click="() =&gt; ds.Close(false)" ButtonStyle="ButtonStyle.Secondary"  Style="margin-bottom: 10px; width: 150px"/&gt;
+    ///                  &lt;RadzenButton Text="Cancel" Click="() =&gt; ds.Close(false)" ButtonStyle="ButtonStyle.Base"  Style="margin-bottom: 10px; width: 150px"/&gt;
     ///                  &lt;RadzenButton Text="Refresh" Click="(() =&gt; { orderID = 10249; ds.Refresh(); })" ButtonStyle="ButtonStyle.Info"  Style="margin-bottom: 10px; width: 150px"/&gt;
     ///                  Order ID: @orderID
     ///              &lt;/div&gt;
@@ -180,6 +181,27 @@ namespace Radzen
         }
 
         /// <summary>
+        /// Opens a side dialog with the specified arguments
+        /// </summary>
+        /// <typeparam name="T">The type of Blazor component which will be displayed in the side dialog.</typeparam>
+        /// <param name="title">The text displayed in the title bar of the side dialog.</param>
+        /// <param name="parameters">The dialog parameters. Passed as property values of <typeparamref name="T"/></param>
+        /// <param name="options">The side dialog options.</param>
+        public void OpenSide<T>(string title, Dictionary<string, object> parameters = null, SideDialogOptions options = null)
+            where T : ComponentBase
+        {
+            CloseSide();
+
+            if (options == null)
+            {
+                options = new SideDialogOptions();
+            }
+
+            options.Title = title;
+            OnSideOpen?.Invoke(typeof(T), parameters ?? new Dictionary<string, object>(), options);
+        }
+
+        /// <summary>
         /// Closes the side dialog
         /// </summary>
         /// <param name="result">The result of the Dialog</param>
@@ -188,8 +210,9 @@ namespace Radzen
             if (_sideDialogTask?.Task.IsCompleted == false)
             {
                 _sideDialogTask.TrySetResult(result);
-                OnSideClose?.Invoke(result);
             }
+
+            OnSideClose?.Invoke(result);
         }
 
         /// <summary>
@@ -209,6 +232,29 @@ namespace Radzen
             options.ChildContent = childContent;
 
             OpenDialog<object>(title, null, options);
+
+            return task.Task;
+        }
+
+        /// <summary>
+        /// Opens a dialog with the specified content.
+        /// </summary>
+        /// <param name="titleContent">The content displayed in the title bar of the dialog.</param>
+        /// <param name="childContent">The content displayed in the dialog.</param>
+        /// <param name="options">The dialog options.</param>
+        /// <returns>The value passed as argument to <see cref="Close" />.</returns>
+        public virtual Task<dynamic> OpenAsync(RenderFragment<DialogService> titleContent, RenderFragment<DialogService> childContent, DialogOptions options = null)
+        {
+            var task = new TaskCompletionSource<dynamic>();
+            tasks.Add(task);
+
+            options = options ?? new DialogOptions();
+
+            options.ChildContent = childContent;
+
+            options.TitleContent = titleContent;
+
+            OpenDialog<object>(null, null, options);
 
             return task.Task;
         }
@@ -248,6 +294,7 @@ namespace Radzen
                 Resizable = options != null ? options.Resizable : false,
                 Draggable = options != null ? options.Draggable : false,
                 ChildContent = options?.ChildContent,
+                TitleContent = options?.TitleContent,
                 Style = options != null ? options.Style : "",
                 AutoFocusFirstElement = options != null ? options.AutoFocusFirstElement : true,
                 CloseDialogOnOverlayClick = options != null ? options.CloseDialogOnOverlayClick : false,
@@ -255,6 +302,9 @@ namespace Radzen
                 CssClass = options != null ? options.CssClass : "",
                 WrapperCssClass = options != null ? options.WrapperCssClass : "",
                 CloseTabIndex = options != null ? options.CloseTabIndex : 0,
+                ContentCssClass = options != null ? options.ContentCssClass : "",
+                Resize = options?.Resize,
+                Drag = options?.Drag
             });
         }
 
@@ -340,7 +390,7 @@ namespace Radzen
 
                     b.OpenComponent<Blazor.RadzenButton>(i++);
                     b.AddAttribute(i++, "Text", options != null ? options.CancelButtonText : "Cancel");
-                    b.AddAttribute(i++, "ButtonStyle", ButtonStyle.Secondary);
+                    b.AddAttribute(i++, "ButtonStyle", ButtonStyle.Base);
                     b.AddAttribute(i++, "Click", EventCallback.Factory.Create<Microsoft.AspNetCore.Components.Web.MouseEventArgs>(this, () => ds.Close(false)));
                     b.CloseComponent();
 
@@ -377,6 +427,7 @@ namespace Radzen
                 CloseDialogOnEsc = options != null ? options.CloseDialogOnEsc : true,
                 CssClass = options != null ? $"rz-dialog-alert {options.CssClass}" : "rz-dialog-alert",
                 WrapperCssClass = options != null ? $"rz-dialog-wrapper {options.WrapperCssClass}" : "rz-dialog-wrapper",
+                ContentCssClass = options != null ? $"rz-dialog-content {options.ContentCssClass}" : "rz-dialog-content",
                 CloseTabIndex = options != null ? options.CloseTabIndex : 0,
             };
 
@@ -452,7 +503,12 @@ namespace Radzen
         /// Gets or sets the CSS classes added to the dialog's wrapper element.
         /// </summary>
         public string WrapperCssClass { get; set; }
-        
+
+        /// <summary>
+        /// Gets or sets the CSS classes added to the dialog's content element.
+        /// </summary>
+        public string ContentCssClass { get; set; }
+
         /// <summary>
         /// Gets or sets a value the dialog escape tabindex. Set to <c>0</c> by default.
         /// </summary>
@@ -478,6 +534,11 @@ namespace Radzen
         /// Whether to show a mask on the background or not
         /// </summary>
         public bool ShowMask { get; set; } = true;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether to focus the first focusable HTML element. Set to <c>true</c> by default.
+        /// </summary>
+        public bool AutoFocusFirstElement { get; set; } = false;
     }
 
     /// <summary>
@@ -513,11 +574,25 @@ namespace Radzen
         /// </summary>
         /// <value><c>true</c> if resizable; otherwise, <c>false</c>.</value>
         public bool Resizable { get; set; } = false;
+
+        /// <summary>
+        /// Gets or sets the change.
+        /// </summary>
+        /// <value>The change.</value>
+        public Action<Size> Resize { get; set; }
+
         /// <summary>
         /// Gets or sets a value indicating whether the dialog is draggable. Set to <c>false</c> by default.
         /// </summary>
         /// <value><c>true</c> if draggable; otherwise, <c>false</c>.</value>
         public bool Draggable { get; set; } = false;
+
+        /// <summary>
+        /// Gets or sets the change.
+        /// </summary>
+        /// <value>The change.</value>
+        public Action<Point> Drag { get; set; }
+
         /// <summary>
         /// Gets or sets the X coordinate of the dialog. Maps to the <c>left</c> CSS attribute.
         /// </summary>
@@ -538,6 +613,11 @@ namespace Radzen
         /// </summary>
         /// <value>The child content.</value>
         public RenderFragment<DialogService> ChildContent { get; set; }
+        /// <summary>
+        /// Gets or sets the title content.
+        /// </summary>
+        /// <value>The title content.</value>
+        public RenderFragment<DialogService> TitleContent { get; set; }
         /// <summary>
         /// Gets or sets a value indicating whether to focus the first focusable HTML element. Set to <c>true</c> by default.
         /// </summary>

@@ -18,10 +18,10 @@ namespace Radzen.Blazor.Tests
 
             var component = ctx.RenderComponent<RadzenDatePicker<DateTime>>();
 
+            Assert.Contains(@$"rz-datepicker", component.Markup);
             Assert.Contains(@$"rz-calendar", component.Markup);
-            Assert.Contains(@$"rz-datepicker-group", component.Markup);
-            Assert.Contains(@$"rz-datepicker-header", component.Markup);
-            Assert.Contains(@$"rz-datepicker-calendar", component.Markup);
+            Assert.Contains(@$"rz-calendar-header", component.Markup);
+            Assert.Contains(@$"rz-calendar-view", component.Markup);
         }
 
         [Fact]
@@ -49,7 +49,8 @@ namespace Radzen.Blazor.Tests
 
             var component = ctx.RenderComponent<RadzenDatePicker<DateTime>>();
 
-            component.SetParametersAndRender(parameters => {
+            component.SetParametersAndRender(parameters =>
+            {
                 parameters.Add<bool>(p => p.ShowTime, true);
                 parameters.Add<bool>(p => p.ShowSeconds, true);
             });
@@ -69,7 +70,8 @@ namespace Radzen.Blazor.Tests
 
             var component = ctx.RenderComponent<RadzenDatePicker<DateTime>>();
 
-            component.SetParametersAndRender(parameters => {
+            component.SetParametersAndRender(parameters =>
+            {
                 parameters.Add<bool>(p => p.ShowTime, true);
                 parameters.Add<bool>(p => p.ShowTimeOkButton, true);
             });
@@ -91,7 +93,8 @@ namespace Radzen.Blazor.Tests
 
             var format = "d";
 
-            component.SetParametersAndRender(parameters => {
+            component.SetParametersAndRender(parameters =>
+            {
                 parameters.Add(p => p.DateFormat, format);
                 parameters.Add<object>(p => p.Value, DateTime.Now);
             });
@@ -108,7 +111,8 @@ namespace Radzen.Blazor.Tests
 
             var component = ctx.RenderComponent<RadzenDatePicker<DateTime>>();
 
-            component.SetParametersAndRender(parameters => {
+            component.SetParametersAndRender(parameters =>
+            {
                 parameters.Add<bool>(p => p.ShowTime, true);
                 parameters.Add(p => p.HourFormat, "12");
             });
@@ -127,12 +131,13 @@ namespace Radzen.Blazor.Tests
 
             var component = ctx.RenderComponent<RadzenDatePicker<DateTime>>();
 
-            component.SetParametersAndRender(parameters => {
+            component.SetParametersAndRender(parameters =>
+            {
                 parameters.Add<bool>(p => p.ShowTime, true);
                 parameters.Add<bool>(p => p.TimeOnly, true);
             });
 
-            Assert.DoesNotContain(@$"rz-datepicker-header", component.Markup);
+            Assert.DoesNotContain(@$"rz-calendar-header", component.Markup);
         }
 
         [Fact]
@@ -144,12 +149,13 @@ namespace Radzen.Blazor.Tests
 
             var component = ctx.RenderComponent<RadzenDatePicker<DateTime>>();
 
-            component.SetParametersAndRender(parameters => {
+            component.SetParametersAndRender(parameters =>
+            {
                 parameters.Add<object>(p => p.Value, DateTime.Now);
                 parameters.Add<bool>(p => p.AllowClear, true);
             });
 
-            Assert.Contains(@$"<i class=""rz-dropdown-clear-icon rzi rzi-times""", component.Markup);
+            Assert.Contains(@$"<i class=""notranslate rz-dropdown-clear-icon rzi rzi-times""", component.Markup);
         }
 
         [Fact]
@@ -212,7 +218,7 @@ namespace Radzen.Blazor.Tests
 
             component.SetParametersAndRender(parameters => parameters.Add(p => p.Style, value));
 
-            Assert.Contains(@$"style=""display: inline-block;{value}""", component.Markup);
+            Assert.Contains(@$"style=""{value}""", component.Markup);
         }
 
         [Fact]
@@ -241,11 +247,12 @@ namespace Radzen.Blazor.Tests
             var raised = false;
             object newValue = null;
 
-            component.SetParametersAndRender(parameters => {
+            component.SetParametersAndRender(parameters =>
+            {
                 parameters.Add(p => p.Change, args => { raised = true; newValue = args; });
             });
 
-            component.Find(".rz-datepicker-next-icon").Click();
+            component.Find(".rz-calendar-next-icon").Click();
 
             Assert.False(raised);
         }
@@ -262,11 +269,12 @@ namespace Radzen.Blazor.Tests
             var raised = false;
             object newValue = null;
 
-            component.SetParametersAndRender(parameters => {
+            component.SetParametersAndRender(parameters =>
+            {
                 parameters.Add(p => p.ValueChanged, args => { raised = true; newValue = args; });
             });
 
-            component.Find(".rz-datepicker-next-icon").Click();
+            component.Find(".rz-calendar-next-icon").Click();
 
             Assert.False(raised);
         }
@@ -283,11 +291,12 @@ namespace Radzen.Blazor.Tests
             var raised = false;
             object newValue = null;
 
-            component.SetParametersAndRender(parameters => {
+            component.SetParametersAndRender(parameters =>
+            {
                 parameters.Add(p => p.Change, args => { raised = true; newValue = args; });
             });
 
-            component.Find(".rz-datepicker-prev-icon").Click();
+            component.Find(".rz-calendar-prev-icon").Click();
 
             Assert.False(raised);
         }
@@ -304,11 +313,12 @@ namespace Radzen.Blazor.Tests
             var raised = false;
             object newValue = null;
 
-            component.SetParametersAndRender(parameters => {
+            component.SetParametersAndRender(parameters =>
+            {
                 parameters.Add(p => p.ValueChanged, args => { raised = true; newValue = args; });
             });
 
-            component.Find(".rz-datepicker-prev-icon").Click();
+            component.Find(".rz-calendar-prev-icon").Click();
 
             Assert.False(raised);
         }
@@ -327,7 +337,8 @@ namespace Radzen.Blazor.Tests
             var raised = false;
             object newValue = null;
 
-            component.SetParametersAndRender(parameters => {
+            component.SetParametersAndRender(parameters =>
+            {
                 parameters.Add(p => p.ValueChanged, args => { raised = true; newValue = args; })
                           .Add(p => p.DateRender, args => { args.Disabled = dates.Contains(args.Date); });
             });
@@ -360,7 +371,8 @@ namespace Radzen.Blazor.Tests
             var raised = false;
             object newValue = null;
 
-            component.SetParametersAndRender(parameters => {
+            component.SetParametersAndRender(parameters =>
+            {
                 parameters.Add(p => p.ValueChanged, args => { raised = true; newValue = args; })
                           .Add(p => p.DateRender, args => { args.Disabled = dates.Contains(args.Date); });
             });
@@ -415,7 +427,8 @@ namespace Radzen.Blazor.Tests
 
             var component = ctx.RenderComponent<RadzenDatePicker<DateTime?>>();
 
-            Func<string, DateTime?> customParseInput = (input) => {
+            Func<string, DateTime?> customParseInput = (input) =>
+            {
                 if (DateTime.TryParseExact(input, "ddMM", null, DateTimeStyles.None, out var result))
                 {
                     return result;
@@ -458,7 +471,7 @@ namespace Radzen.Blazor.Tests
 
             Assert.Contains(DateTime.MaxValue.ToString(component.Instance.DateFormat), component.Markup);
 
-            var exception = Record.Exception(() => component.Find(".rz-datepicker-next-icon")
+            var exception = Record.Exception(() => component.Find(".rz-calendar-next-icon")
                                                             .Click());
             Assert.Null(exception);
         }
@@ -487,7 +500,7 @@ namespace Radzen.Blazor.Tests
                 parameters.Add(p => p.Change, args => { raised = true; newValue = args; });
             });
 
-            component.Find(".rz-datepicker-next-icon").Click();
+            component.Find(".rz-calendar-next-icon").Click();
             component.FindAll(".rz-button-text").First(x => x.TextContent == "Ok").Click();
 
             Assert.True(raised);
@@ -577,6 +590,119 @@ namespace Radzen.Blazor.Tests
             });
 
             Assert.Contains(@$"rzi-time", component.Markup);
+        }
+
+        [Fact]
+        public void DatePicker_Supports_DateOnly()
+        {
+            using var ctx = new TestContext();
+            ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+            ctx.JSInterop.SetupModule("_content/Radzen.Blazor/Radzen.Blazor.js");
+
+            DateOnly? dateOnly = new DateOnly(2024, 1, 31);
+            DateOnly? valueChangedValue = null!;
+            var component = ctx.RenderComponent<RadzenDatePicker<DateOnly?>>(parameters =>
+            {
+                parameters.Add(p => p.Value, dateOnly);
+                parameters.Add(p => p.ValueChanged, args => { valueChangedValue = args; });
+            });
+
+            Assert.False(component.Instance.ShowTime);
+            var input = component.Find("input");
+            input.GetAttribute("value").MarkupMatches(dateOnly.ToString());
+
+            // update to new value
+            var inputElement = component.Find(".rz-inputtext");
+            DateOnly? enteredValue = new DateOnly(2024, 2, 28);
+            ctx.JSInterop.Setup<string>("Radzen.getInputValue", invocation => true).SetResult(enteredValue.Value.ToShortDateString());
+            inputElement.Change(enteredValue);
+
+            input.GetAttribute("value").MarkupMatches(enteredValue.ToString());
+            Assert.Equal(enteredValue, component.Instance.Value);
+            Assert.Equal(enteredValue, valueChangedValue);
+        }
+
+        [Fact]
+        public void DatePicker_Supports_TimeOnly()
+        {
+            using var ctx = new TestContext();
+            ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+            ctx.JSInterop.SetupModule("_content/Radzen.Blazor/Radzen.Blazor.js");
+
+            TimeOnly? timeOnly = new TimeOnly(23, 59, 59);
+            TimeOnly? valueChangedValue = null!;
+            var component = ctx.RenderComponent<RadzenDatePicker<TimeOnly>>(parameters =>
+            {
+                parameters.Add(p => p.Value, timeOnly);
+                parameters.Add(p => p.ValueChanged, args => { valueChangedValue = args; });
+            });
+
+            Assert.True(component.Instance.TimeOnly);
+            Assert.True(component.Instance.ShowTime);
+            var input = component.Find("input");
+            input.GetAttribute("value").MarkupMatches(timeOnly.ToString());
+
+            // update to new value
+            var inputElement = component.Find(".rz-inputtext");
+            TimeOnly? enteredValue = new TimeOnly(1, 4, 5);
+            ctx.JSInterop.Setup<string>("Radzen.getInputValue", invocation => true).SetResult(enteredValue.Value.ToLongTimeString());
+            inputElement.Change(enteredValue);
+
+            input.GetAttribute("value").MarkupMatches(enteredValue.ToString());
+            Assert.Equal(enteredValue, component.Instance.Value);
+            Assert.Equal(enteredValue, valueChangedValue);
+        }
+
+        [Fact]
+        public void DatePicker_ShowCalendarWeek_WeekNumberAddedInAdditionalColumn()
+        {
+            using var ctx = new TestContext();
+            ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+            ctx.JSInterop.SetupModule("_content/Radzen.Blazor/Radzen.Blazor.js");
+
+            var component = ctx.RenderComponent<RadzenDatePicker<DateTime>>(parameter =>
+            {
+                parameter.Add(p => p.ShowCalendarWeek, true);
+            });
+
+            Assert.Contains(@$"rz-calendar-week-number", component.Markup);
+            Assert.Equal(8, component.FindAll(".rz-calendar-view th").Count());
+            // check header and week number column
+            Assert.Single(component.FindAll("th.rz-datepicker-week-number"));
+            Assert.Equal(6, component.FindAll("td.rz-calendar-week-number").Count());
+        }
+
+        [Fact]
+        public void DatePicker_ShowCalendarWeekFalse_NoAdditionalColumn()
+        {
+            using var ctx = new TestContext();
+            ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+            ctx.JSInterop.SetupModule("_content/Radzen.Blazor/Radzen.Blazor.js");
+
+            var component = ctx.RenderComponent<RadzenDatePicker<DateTime>>(parameter =>
+            {
+                parameter.Add(p => p.ShowCalendarWeek, false);
+            });
+
+            Assert.DoesNotContain(@$"rz-calendar-week-number", component.Markup);
+            Assert.Equal(7, component.FindAll(".rz-calendar-view th").Count());
+        }
+
+        [Fact]
+        public void DatePicker_ShowCalendarWeekWithCustomTitle_TitleCorrectlyRendered()
+        {
+            using var ctx = new TestContext();
+            ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+            ctx.JSInterop.SetupModule("_content/Radzen.Blazor/Radzen.Blazor.js");
+
+            var component = ctx.RenderComponent<RadzenDatePicker<DateTime>>(parameter =>
+            {
+                parameter.Add(p => p.ShowCalendarWeek, true);
+                parameter.Add(p => p.CalendarWeekTitle, "Wk");
+            });
+
+            var weekNumberHeader = component.Find(".rz-calendar-view th.rz-datepicker-week-number");
+            Assert.Contains("Wk", weekNumberHeader.InnerHtml);
         }
     }
 }

@@ -23,10 +23,40 @@ namespace Radzen.Blazor
     /// </example>
     public partial class RadzenAutoComplete : DataBoundFormComponent<string>
     {
+        object selectedItem = null;
+
+        /// <summary>
+        /// Gets or sets the selected item.
+        /// </summary>
+        /// <value>The selected item.</value>
+        [Parameter]
+        public object SelectedItem
+        {
+            get
+            {
+                return selectedItem;
+            }
+            set
+            {
+                if (selectedItem != value)
+                {
+                    selectedItem = object.Equals(value, "null") ? null : value;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the selected item changed.
+        /// </summary>
+        /// <value>The selected item changed.</value>
+        [Parameter]
+        public EventCallback<object> SelectedItemChanged { get; set; }
+
         /// <summary>
         /// Specifies additional custom attributes that will be rendered by the input.
         /// </summary>
         /// <value>The attributes.</value>
+        [Parameter]
         public IReadOnlyDictionary<string, object> InputAttributes { get; set; }
 
         /// <summary>
@@ -35,6 +65,13 @@ namespace Radzen.Blazor
         /// <value><c>true</c> if multiline; otherwise, <c>false</c>.</value>
         [Parameter]
         public bool Multiline { get; set; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether popup should open on focus. Set to <c>false</c> by default.
+        /// </summary>
+        /// <value><c>true</c> if popup should open on focus; otherwise, <c>false</c>.</value>
+        [Parameter]
+        public bool OpenOnFocus { get; set; }
 
         /// <summary>
         /// Gets or sets the Popup height.
@@ -63,6 +100,23 @@ namespace Radzen.Blazor
         /// <value>The filter delay.</value>
         [Parameter]
         public int FilterDelay { get; set; } = 500;
+
+        /// <summary>
+        /// Gets or sets the underlying input type.
+        /// </summary>
+        /// <remarks>
+        /// This does not apply when <see cref="Multiline"/> is <c>true</c>.
+        /// </remarks>
+        /// <value>The input type.</value>
+        [Parameter]
+        public string InputType { get; set; } = "text";
+
+        /// <summary>
+        /// Gets or sets the underlying max length.
+        /// </summary>
+        /// <value>The max length value.</value>
+        [Parameter]
+        public long? MaxLength { get; set; }
 
         /// <summary>
         /// Gets search input reference.
@@ -127,6 +181,8 @@ namespace Radzen.Blazor
         {
             var value = await JSRuntime.InvokeAsync<string>("Radzen.getInputValue", search);
 
+            value = $"{value}";
+
             if (value.Length < MinLength)
             {
                 await JSRuntime.InvokeVoidAsync("Radzen.closePopup", PopupID);
@@ -186,7 +242,7 @@ namespace Radzen.Blazor
 
                     string textProperty = string.IsNullOrEmpty(TextProperty) ? string.Empty : $".{TextProperty}";
 
-                    return Query.Where($"o=>o{textProperty}{filterCaseSensitivityOperator}.{Enum.GetName(typeof(StringFilterOperator), FilterOperator)}(@0)",
+                    return Query.Where(DynamicLinqCustomTypeProvider.ParsingConfig, $"o=>o{textProperty}{filterCaseSensitivityOperator}.{Enum.GetName(typeof(StringFilterOperator), FilterOperator)}(@0)",
                         FilterCaseSensitivity == FilterCaseSensitivity.CaseInsensitive ? searchText.ToLower() : searchText);
                 }
 
@@ -205,6 +261,8 @@ namespace Radzen.Blazor
             await ValueChanged.InvokeAsync($"{Value}");
             if (FieldIdentifier.FieldName != null) { EditContext?.NotifyFieldChanged(FieldIdentifier); }
             await Change.InvokeAsync(Value);
+
+            await SelectedItemChanged.InvokeAsync(null);
         }
 
         async System.Threading.Tasks.Task SelectItem(object item)
@@ -221,6 +279,8 @@ namespace Radzen.Blazor
             await ValueChanged.InvokeAsync($"{Value}");
             if (FieldIdentifier.FieldName != null) { EditContext?.NotifyFieldChanged(FieldIdentifier); }
             await Change.InvokeAsync(Value);
+
+            await SelectedItemChanged.InvokeAsync(item);
 
             StateHasChanged();
         }
@@ -280,7 +340,21 @@ namespace Radzen.Blazor
                 shouldClose = !visible;
             }
 
+            if (parameters.DidParameterChange(nameof(SelectedItem), SelectedItem))
+            {
+                var item = parameters.GetValueOrDefault<object>(nameof(SelectedItem));
+                if (item != null)
+                { 
+                    await SelectItem(item);
+                }
+            }
+
             await base.SetParametersAsync(parameters);
+
+            if (parameters.DidParameterChange(nameof(Value), Value))
+            {
+                Value = parameters.GetValueOrDefault<object>(nameof(Value));
+            }
 
             if (shouldClose && !firstRender)
             {
@@ -288,7 +362,6 @@ namespace Radzen.Blazor
             }
         }
 
-#if NET5_0_OR_GREATER
         /// <summary>
         /// Sets the focus on the input element.
         /// </summary>
@@ -296,6 +369,5 @@ namespace Radzen.Blazor
         {
             await search.FocusAsync();
         }
-#endif
     }
 }

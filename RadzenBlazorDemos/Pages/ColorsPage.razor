@@ -1,13 +1,17 @@
 ﻿@page "/colors"
 
+<PageTitle>Blazor Color Utilities | Free UI Components by Radzen</PageTitle>
+<HeadContent>
+    <meta name="description" content="List of colors and utility CSS classes available in Radzen Blazor Components library.">
+</HeadContent>
 <RadzenText TextStyle="TextStyle.H2" TagName="TagName.H1" class="rz-pt-8">
     Colors
 </RadzenText>
-<RadzenText TextStyle="TextStyle.Subtitle1" class="rz-pb-4">
+<RadzenText TextStyle="TextStyle.Subtitle1" TagName="TagName.P" class="rz-pb-4">
     List of colors and utility CSS classes.
 </RadzenText>
 
-<RadzenText TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-8">
+<RadzenText Anchor="colors#theme-colors" TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-8">
     Theme Colors
 </RadzenText>
 <RadzenText TextStyle="TextStyle.Body1" class="rz-mb-8">
@@ -32,7 +36,18 @@
     </RadzenColumn>
     <RadzenColumn Size="12" SizeSM="9">
         <RadzenRow>
-            <RadzenColumn Size="12" SizeSM="6">
+            <RadzenColumn Size="12" SizeSM="4">
+                <div class="colors rz-shadow-2 rz-border-radius-2 rz-mb-8">
+                    <div class="rz-background-color-base"><span class="rz-color-on-base">--rz-base</span></div>
+                </div>
+                <div class="colors rz-shadow-2 rz-border-radius-2">
+                    <div class="rz-background-color-base-lighter"><span class="rz-color-on-base-lighter">--rz-base-lighter</span></div>
+                    <div class="rz-background-color-base-light"><span class="rz-color-on-base-light">--rz-base-light</span></div>
+                    <div class="rz-background-color-base-dark"><span class="rz-color-on-base-dark">--rz-base-dark</span></div>
+                    <div class="rz-background-color-base-darker"><span class="rz-color-on-base-darker">--rz-base-darker</span></div>
+                </div>
+            </RadzenColumn>
+            <RadzenColumn Size="12" SizeSM="4">
                 <div class="colors rz-shadow-2 rz-border-radius-2 rz-mb-8">
                     <div class="rz-background-color-primary"><span class="rz-color-on-primary">--rz-primary</span></div>
                 </div>
@@ -43,7 +58,7 @@
                     <div class="rz-background-color-primary-darker"><span class="rz-color-on-primary-darker">--rz-primary-darker</span></div>
                 </div>
             </RadzenColumn>
-            <RadzenColumn Size="12" SizeSM="6">
+            <RadzenColumn Size="12" SizeSM="4">
                 <div class="colors rz-shadow-2 rz-border-radius-2 rz-mb-8">
                     <div class="rz-background-color-secondary"><span class="rz-color-on-secondary">--rz-secondary</span></div>
                 </div>
@@ -115,7 +130,7 @@
         </div>
     </RadzenColumn>
 </RadzenRow>
-<RadzenText TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-12">
+<RadzenText Anchor="colors#utility-css-classes" TextStyle="TextStyle.H5" TagName="TagName.H2" class="rz-pt-12">
     Utility CSS Classes
 </RadzenText>
 <RadzenText TextStyle="TextStyle.Body1" class="rz-mb-8">

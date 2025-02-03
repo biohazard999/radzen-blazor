@@ -41,7 +41,7 @@ namespace Radzen.Blazor.Tests
 
             component.SetParametersAndRender(parameters => parameters.Add(p => p.Style, value));
 
-            Assert.Contains(@$"style=""outline: 0 none;{value}""", component.Markup);
+            Assert.Contains(@$"style=""{value}""", component.Markup);
         }
 
         [Fact]
@@ -134,5 +134,18 @@ namespace Radzen.Blazor.Tests
             Assert.True(raised);
             Assert.True(object.Equals(value, !(bool)newValue));
         }
+
+        [Fact]
+        public void Switch_Renders_ReadOnlyParameter()
+        {
+            using var ctx = new TestContext();
+
+            var component = ctx.RenderComponent<RadzenSwitch>();
+
+            component.SetParametersAndRender(parameters => parameters.Add<bool>(p => p.ReadOnly, true));
+
+            Assert.Contains(@$"rz-readonly", component.Markup);
+        }
+
     }
 }

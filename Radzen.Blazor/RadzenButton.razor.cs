@@ -28,11 +28,25 @@ namespace Radzen.Blazor
         public RenderFragment ChildContent { get; set; }
 
         /// <summary>
+        /// Gets or sets the index of the tab.
+        /// </summary>
+        /// <value>The index of the tab.</value>
+        [Parameter]
+        public int TabIndex { get; set; } = 0;
+
+        /// <summary>
         /// Gets or sets the text.
         /// </summary>
         /// <value>The text.</value>
         [Parameter]
         public string Text { get; set; } = "";
+
+        /// <summary>
+        /// Gets or sets the text.
+        /// </summary>
+        /// <value>The text.</value>
+        [Parameter]
+        public string ImageAlternateText { get; set; } = "button";
 
         /// <summary>
         /// Gets or sets the icon.

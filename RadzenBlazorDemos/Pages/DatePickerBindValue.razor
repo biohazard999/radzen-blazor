@@ -1,7 +1,8 @@
-﻿<div class="rz-p-12 rz-text-align-center">
-    <RadzenDatePicker @bind-Value=@value />
-</div>
+﻿<RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" AlignItems="AlignItems.Center" Gap="0.5rem" class="rz-p-12">
+    <RadzenLabel Text="Select Date" Component="RadzenDatePickerBindValue" />
+    <RadzenDatePicker @bind-Value=@value Name="RadzenDatePickerBindValue" ShowCalendarWeek />
+</RadzenStack>
 
 @code {
-    DateTime value;
+    DateTime? value;
 }

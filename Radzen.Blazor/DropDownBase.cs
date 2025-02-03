@@ -17,7 +17,6 @@ namespace Radzen
     /// <typeparam name="T"></typeparam>
     public class DropDownBase<T> : DataBoundFormComponent<T>
     {
-#if NET5_0_OR_GREATER
         /// <summary>
         /// Gets or sets a value that determines how many additional items will be rendered before and after the visible region. This help to reduce the frequency of rendering during scrolling. However, higher values mean that more elements will be present in the page.
         /// </summary>
@@ -46,14 +45,14 @@ namespace Radzen
             var totalItemsCount = LoadData.HasDelegate ? Count : view.Count();
             var top = request.Count;
 
-            if(top <= 0)
+            if (top <= 0)
             {
                 top = PageSize;
             }
 
             if (LoadData.HasDelegate)
             {
-                await LoadData.InvokeAsync(new Radzen.LoadDataArgs() { Skip = request.StartIndex, Top = request.Count, Filter = searchText });
+                await LoadData.InvokeAsync(new Radzen.LoadDataArgs() { Skip = request.StartIndex, Top = top, Filter = searchText });
             }
 
             virtualItems = (LoadData.HasDelegate ? Data : view.Skip(request.StartIndex).Take(top)).Cast<object>().ToList();
@@ -78,27 +77,19 @@ namespace Radzen
         /// </summary>
         [Parameter]
         public int PageSize { get; set; } = 5;
-#endif
+
         /// <summary>
         /// Determines whether virtualization is allowed.
         /// </summary>
         /// <returns><c>true</c> if virtualization is allowed; otherwise, <c>false</c>.</returns>
         internal bool IsVirtualizationAllowed()
         {
-#if NET5_0_OR_GREATER
             return AllowVirtualization;
-#else
-            return false;
-#endif
         }
 
         internal int GetVirtualizationOverscanCount()
         {
-#if NET5_0_OR_GREATER
             return VirtualizationOverscanCount;
-#else
-            return 0;
-#endif
         }
 
         /// <summary>
@@ -109,7 +100,6 @@ namespace Radzen
         {
             return new RenderFragment(builder =>
             {
-#if NET5_0_OR_GREATER
                 if (AllowVirtualization)
                 {
                     builder.OpenComponent(0, typeof(Microsoft.AspNetCore.Components.Web.Virtualization.Virtualize<object>));
@@ -122,7 +112,7 @@ namespace Radzen
                         });
                     }));
 
-                    if(VirtualizationOverscanCount != default(int))
+                    if (VirtualizationOverscanCount != default(int))
                     {
                         builder.AddAttribute(3, "OverscanCount", VirtualizationOverscanCount);
                     }
@@ -138,12 +128,6 @@ namespace Radzen
                         RenderItem(builder, item);
                     }
                 }
-#else
-                foreach (var item in LoadData.HasDelegate ? Data : View)
-                {
-                    RenderItem(builder, item);
-                }
-#endif
             });
         }
 
@@ -193,6 +177,13 @@ namespace Radzen
                 return item;
             }
         }
+
+        /// <summary>
+        /// Gets or sets the header template.
+        /// </summary>
+        /// <value>The header template.</value>
+        [Parameter]
+        public RenderFragment HeaderTemplate { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether filtering is allowed. Set to <c>false</c> by default.
@@ -251,16 +242,37 @@ namespace Radzen
         public string DisabledProperty { get; set; }
 
         /// <summary>
+        /// Gets or sets the remove chip button title.
+        /// </summary>
+        /// <value>The remove chip button title.</value>
+        [Parameter]
+        public string RemoveChipTitle { get; set; } = "Remove";
+
+        /// <summary>
+        /// Gets or sets the search aria label text.
+        /// </summary>
+        /// <value>The search aria label text.</value>
+        [Parameter]
+        public string SearchAriaLabel { get; set; } = "Search";
+
+        /// <summary>
+        /// Gets or sets the empty value aria label text.
+        /// </summary>
+        /// <value>The empty value aria label text.</value>
+        [Parameter]
+        public string EmptyAriaLabel { get; set; } = "Empty";
+
+        /// <summary>
         /// Gets or sets the selected item changed.
         /// </summary>
         /// <value>The selected item changed.</value>
         [Parameter]
-        public Action<object> SelectedItemChanged { get; set; }
+        public EventCallback<object> SelectedItemChanged { get; set; }
 
         /// <summary>
         /// The selected items
         /// </summary>
-        protected IList<object> selectedItems = new List<object>();
+        protected ISet<object> selectedItems = new HashSet<object>();
         /// <summary>
         /// The selected item
         /// </summary>
@@ -269,17 +281,17 @@ namespace Radzen
         /// <summary>
         /// Selects all.
         /// </summary>
-        protected async System.Threading.Tasks.Task SelectAll()
+        protected virtual async System.Threading.Tasks.Task SelectAll()
         {
             if (Disabled)
             {
                 return;
             }
 
-            if (selectedItems.Count != View.Cast<object>().ToList().Where(i => disabledPropertyGetter != null ? disabledPropertyGetter(i) as bool? != true : true).Count())
+            if (selectedItems.Count != View.Cast<object>().ToList().Where(i => disabledPropertyGetter == null || disabledPropertyGetter(i) as bool? != true).Count())
             {
                 selectedItems.Clear();
-                selectedItems = View.Cast<object>().ToList().Where(i => disabledPropertyGetter != null ? disabledPropertyGetter(i) as bool? != true : true).ToList();
+                selectedItems = View.Cast<object>().ToList().Where(i => disabledPropertyGetter == null || disabledPropertyGetter(i) as bool? != true).ToHashSet(ItemComparer);
             }
             else
             {
@@ -323,6 +335,8 @@ namespace Radzen
             await Change.InvokeAsync(internalValue);
 
             StateHasChanged();
+
+            await JSRuntime.InvokeVoidAsync("Radzen.focusElement", GetId());
         }
 
         internal bool IsAllSelected()
@@ -422,24 +436,46 @@ namespace Radzen
 
                 if (type == typeof(object) && typeof(EnumerableQuery).IsAssignableFrom(query.GetType()) && query.Any())
                 {
-                    type = query.FirstOrDefault().GetType();
+                    var firstElement = query.Cast<object>().FirstOrDefault(i => i != null);
+                    if (firstElement != null)
+                    {
+                        type = firstElement.GetType();
+                    }
                 }
 
                 if (!string.IsNullOrEmpty(ValueProperty))
                 {
-                    valuePropertyGetter = PropertyAccess.Getter<object, object>(ValueProperty, type);
+                    valuePropertyGetter = GetGetter(ValueProperty, type);
                 }
 
                 if (!string.IsNullOrEmpty(TextProperty))
                 {
-                    textPropertyGetter = PropertyAccess.Getter<object, object>(TextProperty, type);
+                    textPropertyGetter = GetGetter(TextProperty, type);
                 }
 
                 if (!string.IsNullOrEmpty(DisabledProperty))
                 {
-                    disabledPropertyGetter = PropertyAccess.Getter<object, object>(DisabledProperty, type);
+                    disabledPropertyGetter = GetGetter(DisabledProperty, type);
+                }
+
+                if (selectedItems.Count == 0)
+                {
+                    selectedItems = new HashSet<object>(ItemComparer);
                 }
             }
+        }
+
+        Func<object, object> GetGetter(string propertyName, Type type)
+        {
+            if (propertyName?.Contains("[") == true)
+            {
+                var getter = typeof(PropertyAccess).GetMethod("Getter", [typeof(string), typeof(Type)]);
+                var getterMethod = getter.MakeGenericMethod([type, typeof(object)]);
+
+                return (i) => getterMethod.Invoke(i, [propertyName, type]);
+            }
+
+            return PropertyAccess.Getter<object, object>(propertyName, type);
         }
 
         internal Func<object, object> valuePropertyGetter;
@@ -456,30 +492,29 @@ namespace Radzen
         {
             if (item != null)
             {
-                if (property == TextProperty && textPropertyGetter != null)
-                {
-                    return textPropertyGetter(item);
-                }
-                else if (property == ValueProperty && valuePropertyGetter != null)
-                {
-                    return valuePropertyGetter(item);
-                }
-                else if (property == DisabledProperty && disabledPropertyGetter != null)
-                {
-                    return disabledPropertyGetter(item);
-                }
-
                 var enumValue = item as Enum;
                 if (enumValue != null)
                 {
                     return Radzen.Blazor.EnumExtensions.GetDisplayDescription(enumValue);
+                }
+
+                if (property == TextProperty)
+                {
+                    return textPropertyGetter != null ? textPropertyGetter(item) : PropertyAccess.GetItemOrValueFromProperty(item, property);
+                }
+                else if (property == ValueProperty)
+                {
+                    return valuePropertyGetter != null ? valuePropertyGetter(item) : PropertyAccess.GetItemOrValueFromProperty(item, property);
+                }
+                else if (property == DisabledProperty)
+                {
+                    return disabledPropertyGetter != null ? disabledPropertyGetter(item) : PropertyAccess.GetItemOrValueFromProperty(item, property);
                 }
             }
 
             return item;
         }
 
-#if NET5_0_OR_GREATER
         /// <inheritdoc/>
         protected override async Task OnDataChanged()
         {
@@ -490,7 +525,6 @@ namespace Radzen
                 await InvokeAsync(Virtualize.RefreshDataAsync);
             }
         }
-#endif
 
         /// <summary>
         /// Gets the popup identifier.
@@ -508,7 +542,7 @@ namespace Radzen
         /// Gets the search identifier.
         /// </summary>
         /// <value>The search identifier.</value>
-        protected string SearchID
+        public string SearchID
         {
             get
             {
@@ -584,12 +618,15 @@ namespace Radzen
             }
         }
 
+        internal bool preventKeydown = false;
+
         /// <summary>
         /// Handles the key press.
         /// </summary>
         /// <param name="args">The <see cref="Microsoft.AspNetCore.Components.Web.KeyboardEventArgs"/> instance containing the event data.</param>
         /// <param name="isFilter">if set to <c>true</c> [is filter].</param>
-        protected virtual async System.Threading.Tasks.Task HandleKeyPress(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args, bool isFilter = false)
+        /// <param name="shouldSelectOnChange">Should select item on item change with keyboard.</param>
+        protected virtual async System.Threading.Tasks.Task HandleKeyPress(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args, bool isFilter = false, bool? shouldSelectOnChange = null)
         {
             if (Disabled)
                 return;
@@ -607,9 +644,7 @@ namespace Radzen
             {
                 if (IsVirtualizationAllowed())
                 {
-#if NET5_0_OR_GREATER
-                    items = virtualItems;
-#endif
+                    items = virtualItems ?? Enumerable.Empty<object>().ToList();
                 }
                 else
                 {
@@ -621,23 +656,21 @@ namespace Radzen
 
             if (!args.AltKey && (key == "ArrowDown" || key == "ArrowLeft" || key == "ArrowUp" || key == "ArrowRight"))
             {
+                preventKeydown = true;
+
                 try
                 {
-                    var currentViewIndex = Multiple ? selectedIndex : items.IndexOf(selectedItem);
+                    selectedIndex = await JSRuntime.InvokeAsync<int>("Radzen.focusListItem", search, list, key == "ArrowDown" || key == "ArrowRight", selectedIndex);
 
-                    var newSelectedIndex = await JSRuntime.InvokeAsync<int>("Radzen.focusListItem", search, list, key == "ArrowDown" || key == "ArrowRight", currentViewIndex);
+                    var popupOpened = await JSRuntime.InvokeAsync<bool>("Radzen.popupOpened", PopupID);
 
-                    if (!Multiple)
+                    if (!Multiple && !popupOpened && shouldSelectOnChange != false)
                     {
-                        if (newSelectedIndex != currentViewIndex && newSelectedIndex >= 0 && newSelectedIndex <= items.Count() - 1)
+                        var itemToSelect = items.ElementAtOrDefault(selectedIndex);
+                        if (itemToSelect != null)
                         {
-                            selectedIndex = newSelectedIndex;
-                            await OnSelectItem(items.ElementAt(selectedIndex), true);
+                            await OnSelectItem(itemToSelect, true);
                         }
-                    }
-                    else
-                    {
-                        selectedIndex = await JSRuntime.InvokeAsync<int>("Radzen.focusListItem", search, list, key == "ArrowDown", currentViewIndex);
                     }
                 }
                 catch (Exception)
@@ -645,24 +678,50 @@ namespace Radzen
                     //
                 }
             }
-            else if (Multiple && key == "Enter")
+            else if (key == "Enter" || key == "NumpadEnter")
             {
+                preventKeydown = true;
+
                 if (selectedIndex >= 0 && selectedIndex <= items.Count() - 1)
                 {
+                    var itemToSelect = items.ElementAtOrDefault(selectedIndex);
+
                     await JSRuntime.InvokeAsync<string>("Radzen.setInputValue", search, $"{searchText}".Trim());
-                    await OnSelectItem(items.ElementAt(selectedIndex), true);
+
+                    if (itemToSelect != null)
+                    {
+                        await OnSelectItem(itemToSelect, true);
+                    }
+                }
+
+                var popupOpened = await JSRuntime.InvokeAsync<bool>("Radzen.popupOpened", PopupID);
+
+                if (!popupOpened)
+                {
+                    await OpenPopup(key, isFilter);
+                }
+                else
+                {
+                    if (!Multiple)
+                    {
+                        await ClosePopup(key);
+                    }
                 }
             }
-            else if (key == "Enter" || (args.AltKey && key == "ArrowDown"))
+            else if (args.AltKey && key == "ArrowDown")
             {
+                preventKeydown = true;
+
                 await OpenPopup(key, isFilter);
             }
             else if (key == "Escape" || key == "Tab")
             {
-                await JSRuntime.InvokeVoidAsync("Radzen.closePopup", PopupID);
+                await ClosePopup(key);
             }
             else if (key == "Delete" && AllowClear)
             {
+                preventKeydown = true;
+
                 if (!Multiple && selectedItem != null)
                 {
                     selectedIndex = -1;
@@ -676,9 +735,57 @@ namespace Radzen
             }
             else if (AllowFiltering && isFilter && FilterAsYouType)
             {
+                preventKeydown = true;
+
                 Debounce(DebounceFilter, FilterDelay);
             }
+            else
+            {
+                var filteredItems = (!string.IsNullOrEmpty(TextProperty) ?
+                    Query.Where(TextProperty, args.Key, StringFilterOperator.StartsWith, FilterCaseSensitivity.CaseInsensitive) :
+                    Query)
+                    .Cast<object>()
+                    .ToList();
+
+
+                if (previousKey != args.Key)
+                {
+                    previousKey = args.Key;
+                    itemIndex = -1;
+                }
+
+                itemIndex = itemIndex + 1 >= filteredItems.Count() ? 0 : itemIndex + 1;
+                var itemToSelect = filteredItems.ElementAtOrDefault(itemIndex);
+
+                if (itemToSelect != null)
+                {
+                    if (!Multiple)
+                    {
+                        await SelectItem(itemToSelect);
+                    }
+
+                    var result = items.Select((x, i) => new { Item = x, Index = i }).FirstOrDefault(itemWithIndex => object.Equals(itemWithIndex.Item, itemToSelect));
+                    if (result != null)
+                    {
+                        if (!Multiple)
+                        {
+                            selectedIndex = result.Index;
+                        }
+                        await JSRuntime.InvokeVoidAsync("Radzen.selectListItem", list, list, result.Index);
+                    }
+                }
+
+                preventKeydown = false;
+            }
         }
+
+        internal virtual async Task ClosePopup(string key)
+        {
+            await JSRuntime.InvokeVoidAsync("Radzen.closePopup", PopupID);
+        }
+
+        int itemIndex;
+        string previousKey;
 
         /// <summary>
         /// Handles the <see cref="E:FilterKeyPress" /> event.
@@ -699,13 +806,11 @@ namespace Radzen
                 _view = null;
                 if (IsVirtualizationAllowed())
                 {
-#if NET5_0_OR_GREATER
                     if (virtualize != null)
                     {
                         await virtualize.RefreshDataAsync();
                     }
                     await InvokeAsync(() => { StateHasChanged(); });
-#endif
                 }
                 else
                 {
@@ -716,13 +821,15 @@ namespace Radzen
             {
                 if (IsVirtualizationAllowed())
                 {
-#if NET5_0_OR_GREATER
                     if (virtualize != null)
                     {
                         await InvokeAsync(virtualize.RefreshDataAsync);
                     }
+                    else
+                    {
+                        await LoadData.InvokeAsync(await GetLoadDataArgs());
+                    }
                     await InvokeAsync(() => { StateHasChanged(); });
-#endif
                 }
                 else
                 {
@@ -741,9 +848,10 @@ namespace Radzen
         /// Handles the <see cref="E:KeyPress" /> event.
         /// </summary>
         /// <param name="args">The <see cref="Microsoft.AspNetCore.Components.Web.KeyboardEventArgs"/> instance containing the event data.</param>
-        protected virtual async System.Threading.Tasks.Task OnKeyPress(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args)
+        /// <param name="shouldSelectOnChange">Should select item on item change with keyboard.</param>
+        protected virtual async System.Threading.Tasks.Task OnKeyPress(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args, bool? shouldSelectOnChange = null)
         {
-            await HandleKeyPress(args);
+            await HandleKeyPress(args, false, shouldSelectOnChange);
         }
 
         /// <summary>
@@ -771,7 +879,6 @@ namespace Radzen
         /// <returns>LoadDataArgs.</returns>
         internal virtual async System.Threading.Tasks.Task<LoadDataArgs> GetLoadDataArgs()
         {
-#if NET5_0_OR_GREATER
             if (AllowVirtualization)
             {
                 return await Task.FromResult(new Radzen.LoadDataArgs() { Skip = 0, Top = PageSize, Filter = searchText });
@@ -780,9 +887,6 @@ namespace Radzen
             {
                 return await Task.FromResult(new Radzen.LoadDataArgs() { Filter = searchText });
             }
-#else
-            return await Task.FromResult(new Radzen.LoadDataArgs() { Filter = searchText });
-#endif
         }
 
         /// <summary>
@@ -817,13 +921,12 @@ namespace Radzen
         /// <returns>A Task representing the asynchronous operation.</returns>
         public override async Task SetParametersAsync(ParameterView parameters)
         {
-#if NET5_0_OR_GREATER
             var pageSize = parameters.GetValueOrDefault<int>(nameof(PageSize));
-            if(pageSize != default(int))
+            if (pageSize != default(int))
             {
                 PageSize = pageSize;
             }
-#endif
+
             var selectedItemChanged = parameters.DidParameterChange(nameof(SelectedItem), SelectedItem);
             if (selectedItemChanged)
             {
@@ -861,7 +964,7 @@ namespace Radzen
 
             if (valueAsEnumerable != null)
             {
-                if (!valueAsEnumerable.Cast<object>().SequenceEqual(selectedItems.Select(i => GetItemOrValueFromProperty(i, ValueProperty))))
+                if (!valueAsEnumerable.Cast<object>().SequenceEqual(selectedItems.Select(i => string.IsNullOrEmpty(ValueProperty) ? i : GetItemOrValueFromProperty(i, ValueProperty))))
                 {
                     selectedItems.Clear();
                 }
@@ -896,7 +999,7 @@ namespace Radzen
             {
                 if (Multiple)
                 {
-                    return selectedItems.IndexOf(item) != -1;
+                    return selectedItems.Contains(item);
                 }
                 else
                 {
@@ -954,70 +1057,7 @@ namespace Radzen
             {
                 if (_view == null && Query != null)
                 {
-                    if (!string.IsNullOrEmpty(searchText))
-                    {
-                        var ignoreCase = FilterCaseSensitivity == FilterCaseSensitivity.CaseInsensitive;
-
-                        var query = new List<string>();
-
-                        if (!string.IsNullOrEmpty(TextProperty))
-                        {
-                            query.Add(TextProperty);
-                        }
-
-                        if (typeof(EnumerableQuery).IsAssignableFrom(Query.GetType()))
-                        {
-                            query.Add("ToString()");
-                        }
-
-                        if (ignoreCase)
-                        {
-                            query.Add("ToLower()");
-                        }
-
-                        query.Add($"{Enum.GetName(typeof(StringFilterOperator), FilterOperator)}(@0)");
-
-                        var search = ignoreCase ? searchText.ToLower() : searchText;
-
-                        if (Query.ElementType == typeof(Enum))
-                        {
-                            _view = Query.Cast<Enum>()
-                                .Where((Func<Enum, bool>)(i =>
-                                {
-                                    var value = ignoreCase ? i.GetDisplayDescription().ToLower() : i.GetDisplayDescription();
-
-                                    if (FilterOperator == StringFilterOperator.Contains)
-                                    {
-                                        return value.Contains(search);
-                                    }
-                                    else if (FilterOperator == StringFilterOperator.StartsWith)
-                                    {
-                                        return value.StartsWith(search);
-                                    }
-                                    else if (FilterOperator == StringFilterOperator.EndsWith)
-                                    {
-                                        return value.EndsWith(search);
-                                    }
-
-                                    return value == search;
-                                })).AsQueryable();
-                        }
-                        else
-                        {
-                            _view = Query.Where(String.Join(".", query), search);
-                        }
-                    }
-                    else
-                    {
-                        if (IsVirtualizationAllowed())
-                        {
-                            _view = Query;
-                        }
-                        else
-                        {
-                            _view = (typeof(IQueryable).IsAssignableFrom(Data.GetType())) ? (Query as IEnumerable).Cast<object>().ToList().AsQueryable() : Query;
-                        }
-                    }
+                    _view = Query.Where(TextProperty, searchText, FilterOperator, FilterCaseSensitivity);
                 }
 
                 return _view;
@@ -1065,7 +1105,7 @@ namespace Radzen
         /// <param name="raiseChange">if set to <c>true</c> [raise change].</param>
         public async System.Threading.Tasks.Task SelectItem(object item, bool raiseChange = true)
         {
-            if (disabledPropertyGetter != null && disabledPropertyGetter(item) as bool? == true)
+            if (disabledPropertyGetter != null && item != null && disabledPropertyGetter(item) as bool? == true)
             {
                 return;
             }
@@ -1087,7 +1127,7 @@ namespace Radzen
 
                 SetSelectedIndexFromSelectedItem();
 
-                SelectedItemChanged?.Invoke(selectedItem);
+                await SelectedItemChanged.InvokeAsync(selectedItem);
             }
             else
             {
@@ -1105,7 +1145,11 @@ namespace Radzen
 
                     if (elementType == typeof(object) && typeof(EnumerableQuery).IsAssignableFrom(query.GetType()) && query.Any())
                     {
-                        elementType = query.FirstOrDefault().GetType();
+                        var firstElement = query.Cast<object>().FirstOrDefault(i => i != null);
+                        if (firstElement != null)
+                        {
+                            elementType = firstElement.GetType();
+                        }
                     }
 
                     if (elementType != null)
@@ -1185,18 +1229,14 @@ namespace Radzen
                 }
                 else
                 {
-                    selectedItems = selectedItems.AsQueryable().Where($@"!object.Equals(it.{ValueProperty},@0)", value).ToList();
+                    selectedItems = selectedItems.AsQueryable().Where(i => !object.Equals(GetItemOrValueFromProperty(i, ValueProperty), value)).ToHashSet(ItemComparer);
                 }
             }
             else
             {
-                if (!selectedItems.Any(i => object.Equals(i, item)))
+                if (!selectedItems.Add(item))
                 {
-                    selectedItems.Add(item);
-                }
-                else
-                {
-                    selectedItems = selectedItems.Where(i => !object.Equals(i, item)).ToList();
+                    selectedItems.Remove(item);
                 }
             }
         }
@@ -1220,7 +1260,7 @@ namespace Radzen
                         }
                         else
                         {
-                            SelectedItem = view.AsQueryable().Where($@"{ValueProperty} == @0", value).FirstOrDefault();
+                            SelectedItem = view.AsQueryable().Where(DynamicLinqCustomTypeProvider.ParsingConfig, $@"{ValueProperty} == @0", value).FirstOrDefault();
                         }
                     }
                     else
@@ -1229,8 +1269,6 @@ namespace Radzen
                     }
 
                     SetSelectedIndexFromSelectedItem();
-
-                    SelectedItemChanged?.Invoke(selectedItem);
                 }
                 else
                 {
@@ -1249,10 +1287,10 @@ namespace Radzen
                                 }
                                 else
                                 {
-                                    item = view.AsQueryable().Where($@"{ValueProperty} == @0", v).FirstOrDefault();
+                                    item = view.AsQueryable().Where(DynamicLinqCustomTypeProvider.ParsingConfig, $@"{ValueProperty} == @0", v).FirstOrDefault();
                                 }
 
-                                if (!object.Equals(item, null) && !selectedItems.AsQueryable().Where($@"object.Equals(it.{ValueProperty},@0)", v).Any())
+                                if (!object.Equals(item, null) && !selectedItems.AsQueryable().Where(i => object.Equals(GetItemOrValueFromProperty(i, ValueProperty), v)).Any())
                                 {
                                     selectedItems.Add(item);
                                 }
@@ -1260,7 +1298,7 @@ namespace Radzen
                         }
                         else
                         {
-                            selectedItems = ((IEnumerable)values).Cast<object>().ToList();
+                            selectedItems = values.Cast<object>().ToHashSet(ItemComparer);
                         }
 
                     }
@@ -1271,6 +1309,11 @@ namespace Radzen
                 selectedItem = null;
             }
         }
+
+        /// <summary>
+        /// For lists of objects, an IEqualityComparer to control how selected items are determined
+        /// </summary>
+        [Parameter] public IEqualityComparer<object> ItemComparer { get; set; }
 
         internal bool IsItemSelectedByValue(object v)
         {
